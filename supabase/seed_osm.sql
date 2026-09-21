@@ -313,3 +313,30 @@ from (values
   ('Arret Terrain liberté 6', 10)
 ) as v(name, seq)
 join stops s on s.name = v.name;
+
+-- BRT — B3 (semi-express) : Préfecture de Guédiawaye ↔ Papa Gueye Fall
+-- Source : sunubrt.sn/brt-3-semi-express — 7 stations, lun-ven en heures de
+-- pointe (7h-11h et 16h-20h). Les 7 stations sont des stations de la B1 : les
+-- coordonnées viennent donc du relevé ci-dessus.
+insert into lines (operator_id, code, name, fare_fcfa)
+select o.id, 'B3', 'Préfecture de Guédiawaye ↔ Papa Gueye Fall (semi-express)', 400
+from operators o where o.short_name = 'BRT'
+on conflict (operator_id, code) do update set name = excluded.name, fare_fcfa = excluded.fare_fcfa;
+
+delete from line_stops where line_id = (select l.id from lines l join operators o on o.id = l.operator_id
+          where o.short_name = 'BRT' and l.code = 'B3');
+
+insert into line_stops (line_id, stop_id, sequence)
+select (select l.id from lines l join operators o on o.id = l.operator_id
+          where o.short_name = 'BRT' and l.code = 'B3'),
+       s.id, v.seq
+from (values
+  ('Préfecture de Guédiawaye', 1),
+  ('Gueule Tapée', 2),
+  ('Parcelles', 3),
+  ('Croisement 22', 4),
+  ('Khar Yalla', 5),
+  ('Place de la Nation', 6),
+  ('Papa Gueye Fall', 7)
+) as v(name, seq)
+join stops s on s.name = v.name;
