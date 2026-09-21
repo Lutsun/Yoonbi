@@ -29,7 +29,7 @@ export default function LoginPage() {
         <div className="auth-logo">Y</div>
         <div className="brand">
           <span className="brand-yonn">Yonn</span>
-          <span className="brand-ma">ma</span>
+          <span className="brand-bi">bi</span>
         </div>
         <p className="auth-subtitle">Console d'administration</p>
 

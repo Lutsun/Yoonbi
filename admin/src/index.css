@@ -85,7 +85,7 @@ h1, h2, h3, p { margin: 0; }
 
 .brand { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
 .brand-yonn { color: var(--yonn); }
-.brand-ma { color: var(--ink); }
+.brand-bi { color: var(--ink); }
 
 .auth-subtitle { margin: -10px 0 4px; color: var(--ink-muted); }
 

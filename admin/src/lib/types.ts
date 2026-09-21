@@ -30,7 +30,7 @@ export type LineStop = {
   sequence: number;
 };
 
-export type YonnmaUser = {
+export type YonnbiUser = {
   id: string;
   full_name: string;
   city: string | null;

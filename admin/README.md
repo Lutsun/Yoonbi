@@ -1,6 +1,6 @@
-# Yonnma — Console d'administration
+# Yonnbi — Console d'administration
 
-Application web (React + Vite + TypeScript) pour gérer le contenu de Yonnma : opérateurs, lignes, tracés et arrêts. C'est un projet séparé de l'app mobile, mais elle utilise la **même base Supabase**.
+Application web (React + Vite + TypeScript) pour gérer le contenu de Yonnbi : opérateurs, lignes, tracés et arrêts. C'est un projet séparé de l'app mobile, mais elle utilise la **même base Supabase**.
 
 ## Comment ça marche
 
