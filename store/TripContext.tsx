@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useRef, useState } from 'react';
+import { snapPlanToRoads } from '../services/roadPath';
 import { Stop, TripOption, TripPlan } from '../types/transit';
 
 // Trajet actuellement affiché sur la carte d'accueil, calculé par le
@@ -43,12 +44,24 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
   const [activeTrip, setActiveTripState] = useState<ActiveTrip | null>(null);
   const [pendingTrip, setPendingTripState] = useState<PendingTrip | null>(null);
   const [previewTrip, setPreviewTripState] = useState<PreviewTrip | null>(null);
+  const tripVersion = useRef(0);
 
   const value = useMemo<TripContextValue>(
     () => ({
       activeTrip,
-      setActiveTrip: (trip) => setActiveTripState(trip),
-      clearActiveTrip: () => setActiveTripState(null),
+      setActiveTrip: (trip) => {
+        // Le guidage démarre tout de suite sur le tracé droit ; il est
+        // remplacé par le tracé suivant les rues dès qu'il est calculé.
+        const version = ++tripVersion.current;
+        setActiveTripState(trip);
+        snapPlanToRoads(trip.plan).then((plan) => {
+          if (version === tripVersion.current) setActiveTripState({ ...trip, plan });
+        });
+      },
+      clearActiveTrip: () => {
+        tripVersion.current += 1;
+        setActiveTripState(null);
+      },
       pendingTrip,
       setPendingTrip: (trip) => setPendingTripState(trip),
       previewTrip,
