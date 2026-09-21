@@ -28,7 +28,7 @@ export default function LoginPage() {
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-logo">Y</div>
         <div className="brand">
-          <span className="brand-yonn">Yonn</span>
+          <span className="brand-yonn">Yoon</span>
           <span className="brand-bi">bi</span>
         </div>
         <p className="auth-subtitle">Console d'administration</p>

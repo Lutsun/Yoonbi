@@ -20,7 +20,7 @@ export default function Layout() {
         <div className="sidebar-brand">
           <span className="sidebar-brand-mark">Y</span>
           <span>
-            <span style={{ color: 'var(--yonn)' }}>Yonn</span>bi
+            <span style={{ color: 'var(--yonn)' }}>Yoon</span>bi
           </span>
         </div>
         <nav className="sidebar-nav">

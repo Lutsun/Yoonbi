@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Line, LineStop, Operator, Stats, Stop, YonnbiUser } from './types';
+import type { Line, LineStop, Operator, Stats, Stop, YoonbiUser } from './types';
 
 // Toutes les lectures et écritures de la console passent par ici : les écrans
 // ne parlent jamais directement à Supabase.
@@ -139,7 +139,7 @@ export async function getStats(): Promise<Stats> {
 // service_role), qu'on ne met délibérément pas dans une app servie au
 // navigateur — ce serait la rendre lisible par n'importe qui.
 
-export async function listUsers(): Promise<YonnbiUser[]> {
+export async function listUsers(): Promise<YoonbiUser[]> {
   const { data, error } = await supabase.rpc('admin_list_users');
   fail(error);
   return data ?? [];

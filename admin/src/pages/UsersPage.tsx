@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, Users as UsersIcon } from 'lucide-react';
 import { listUsers } from '../lib/api';
-import type { YonnbiUser } from '../lib/types';
+import type { YoonbiUser } from '../lib/types';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 
@@ -16,7 +16,7 @@ function formatDate(iso: string): string {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<YonnbiUser[]>([]);
+  const [users, setUsers] = useState<YoonbiUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -40,7 +40,7 @@ export default function UsersPage() {
     <div>
       <PageHeader
         title="Utilisateurs"
-        subtitle={`${users.length} compte${users.length > 1 ? 's' : ''} créé${users.length > 1 ? 's' : ''} sur Yonnbi`}
+        subtitle={`${users.length} compte${users.length > 1 ? 's' : ''} créé${users.length > 1 ? 's' : ''} sur Yoonbi`}
       />
 
       {error && <div className="notice notice-danger" style={{ marginBottom: 16 }}>{error}</div>}
