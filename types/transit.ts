@@ -20,6 +20,12 @@ export type Stop = {
   latitude: number;
   longitude: number;
   distance_meters?: number;
+  /** Vrai pour un lieu (mairie, hôpital…) qui n'est pas un arrêt du réseau. */
+  isPlace?: boolean;
+  /** Commune / quartier, pour les lieux. */
+  subtitle?: string;
+  /** Catégorie OSM simplifiée : hospital, townhall, market, school… */
+  category?: string;
   lines?: string[];
   operator_colors?: string[];
 };

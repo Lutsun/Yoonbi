@@ -312,6 +312,53 @@ export function withAccessWalk(plan: TripPlan, from: LatLng, boardingStop: Stop)
   };
 }
 
+// Ajoute la marche finale entre l'arrêt où l'on descend et le lieu visé
+// (mairie, hôpital, marché…), qui n'est pas lui-même un arrêt du réseau.
+export function withEgressWalk(plan: TripPlan, alightStop: Stop, place: LatLng & { id: string; name: string }): TripPlan {
+  const km = distanceKm(alightStop.latitude, alightStop.longitude, place.latitude, place.longitude);
+  if (km < MIN_ACCESS_WALK_KM) return plan;
+
+  const minutes = Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60));
+  const walk: TripSegment = {
+    type: 'walk',
+    fromStopId: alightStop.id,
+    fromStopName: alightStop.name,
+    toStopId: place.id,
+    toStopName: place.name,
+    minutes,
+    path: [
+      { latitude: alightStop.latitude, longitude: alightStop.longitude },
+      { latitude: place.latitude, longitude: place.longitude },
+    ],
+  };
+
+  return {
+    ...plan,
+    totalMinutes: plan.totalMinutes + minutes,
+    totalWalkMinutes: plan.totalWalkMinutes + minutes,
+    segments: [...plan.segments, walk],
+  };
+}
+
+/**
+ * Garde les deux meilleurs trajets parmi plusieurs candidats, en ne retenant
+ * qu'un trajet par combinaison de lignes (deux trajets qui prennent les mêmes
+ * lignes ne sont pas un vrai choix).
+ */
+export function pickBestOptions(plans: TripPlan[]): TripOption[] {
+  const sorted = [...plans].sort((a, b) => a.totalMinutes - b.totalMinutes);
+  const seen = new Set<string>();
+  const unique: TripPlan[] = [];
+  for (const plan of sorted) {
+    const key = rideSignature(plan);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(plan);
+    if (unique.length === 2) break;
+  }
+  return unique.map((plan, i) => ({ plan, recommended: i === 0 }));
+}
+
 // Nombre d'arrêts de départ comparés quand on part de la position réelle.
 const MAX_ORIGIN_CANDIDATES = 5;
 

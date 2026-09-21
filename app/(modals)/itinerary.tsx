@@ -18,16 +18,19 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import { Fonts, Radii, Spacing, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
 import { getNearbyStops, getRouteGraph, searchStops } from '../../services/transit';
+import { searchPlaces } from '../../services/places';
 import {
   buildRouteGraph,
+  pickBestOptions,
   planFromPosition,
   planTripOptions,
   RouteGraph,
   USER_POSITION_ID,
+  withEgressWalk,
 } from '../../services/routing';
 import { useUserLocation } from '../../store/LocationContext';
 import { useTrip } from '../../store/TripContext';
-import { Stop } from '../../types/transit';
+import { Stop, TripPlan } from '../../types/transit';
 import { formatDistance } from '../../utils/eta';
 
 // Le graphe du réseau ne change pas pendant une session : on le garde en
@@ -43,6 +46,25 @@ const OUTCOME_MESSAGE: Record<Exclude<Outcome, 'none'>, string> = {
   error: 'Impossible de calculer l’itinéraire. Vérifie ta connexion.',
   'no-location': 'Active la localisation pour partir de ta position exacte.',
 };
+
+const PLACE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  hospital: 'medkit',
+  pharmacy: 'medical',
+  townhall: 'business',
+  market: 'basket',
+  school: 'school',
+  worship: 'star-outline',
+  police: 'shield',
+  bank: 'card',
+  station: 'train',
+  sport: 'football',
+  food: 'restaurant',
+  hotel: 'bed',
+};
+
+function placeIcon(category?: string): keyof typeof Ionicons.glyphMap {
+  return (category && PLACE_ICONS[category]) || 'location';
+}
 
 export default function ItineraryScreen() {
   const router = useRouter();
@@ -76,11 +98,15 @@ export default function ItineraryScreen() {
       return;
     }
     clearTimeout(debounceRef.current);
+    // Les lieux (mairie, hôpital…) ne servent que de destination ; Nominatim
+    // impose une requête par seconde au plus, d'où l'anti-rebond plus long.
+    const withPlaces = activeField === 'destination';
     debounceRef.current = setTimeout(() => {
-      searchStops(text)
-        .then(setResults)
-        .catch(() => setResults([]));
-    }, 250);
+      Promise.all([
+        searchStops(text).catch(() => [] as Stop[]),
+        withPlaces ? searchPlaces(text).catch(() => [] as Stop[]) : Promise.resolve([] as Stop[]),
+      ]).then(([stopsFound, placesFound]) => setResults([...stopsFound.slice(0, 4), ...placesFound]));
+    }, 450);
     return () => clearTimeout(debounceRef.current);
   }, [activeField, originText, destinationText]);
 
@@ -173,7 +199,42 @@ export default function ItineraryScreen() {
       let from: Stop;
       let options;
 
-      if (originIsUser && position) {
+      if (destination.isPlace) {
+        // Un lieu n'est pas un arrêt : on vise les arrêts les plus proches de
+        // lui, puis on ajoute la marche finale jusqu'à sa porte.
+        let exits = await getNearbyStops(destination.latitude, destination.longitude, 1000);
+        if (exits.length === 0) {
+          exits = await getNearbyStops(destination.latitude, destination.longitude, 2500);
+        }
+        if (exits.length === 0) {
+          setOutcome('no-path');
+          return;
+        }
+
+        const startCandidates =
+          originIsUser && position
+            ? await getNearbyStops(position.latitude, position.longitude, 1200).then(async (c) =>
+                c.length > 0 ? c : getNearbyStops(position.latitude, position.longitude, 3000)
+              )
+            : [];
+
+        const plans: TripPlan[] = [];
+        for (const exit of exits.slice(0, 3)) {
+          const found =
+            originIsUser && position
+              ? planFromPosition(cachedGraph, position, startCandidates, exit.id)
+              : planTripOptions(cachedGraph, origin!.id, exit.id);
+          for (const option of found) {
+            if (option.plan.segments.length === 0) continue;
+            plans.push(withEgressWalk(option.plan, exit, destination));
+          }
+        }
+        options = pickBestOptions(plans);
+        from =
+          originIsUser && position
+            ? { id: USER_POSITION_ID, name: 'Ma position', latitude: position.latitude, longitude: position.longitude }
+            : origin!;
+      } else if (originIsUser && position) {
         // Départ réel : on compare les arrêts accessibles à pied (d'abord
         // dans un rayon de marche raisonnable, sinon un peu plus loin).
         let candidates = await getNearbyStops(position.latitude, position.longitude, 1200);
@@ -310,7 +371,7 @@ export default function ItineraryScreen() {
         {!!activeField && list.length > 0 && (
           <>
             <Text style={styles.listLabel}>
-              {listIsSuggestions ? 'Arrêts autour de toi' : 'Résultats'}
+              {listIsSuggestions ? 'Arrêts autour de toi' : 'Arrêts et lieux'}
             </Text>
             {list.map((stop) => (
               <TouchableOpacity
@@ -322,15 +383,24 @@ export default function ItineraryScreen() {
                 <View
                   style={[
                     styles.stopIcon,
-                    { backgroundColor: (stop.operator_colors?.[0] ?? c.yonn) + '22' },
+                    { backgroundColor: (stop.isPlace ? c.ink : stop.operator_colors?.[0] ?? c.yonn) + '22' },
                   ]}
                 >
-                  <Ionicons name="bus" size={16} color={stop.operator_colors?.[0] ?? c.yonn} />
+                  <Ionicons
+                    name={stop.isPlace ? placeIcon(stop.category) : 'bus'}
+                    size={16}
+                    color={stop.isPlace ? c.ink : stop.operator_colors?.[0] ?? c.yonn}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.stopName} numberOfLines={1}>
                     {stop.name}
                   </Text>
+                  {!!stop.subtitle && (
+                    <Text style={styles.stopLines} numberOfLines={1}>
+                      {stop.subtitle}
+                    </Text>
+                  )}
                   {!!stop.lines?.length && (
                     <Text style={styles.stopLines} numberOfLines={1}>
                       {stop.lines.join(' · ')}
