@@ -1,4 +1,4 @@
--- Yonnma — données de démarrage (réelles)
+-- Yonnbi — données de démarrage (réelles)
 --
 -- Sources : sites officiels Sunu BRT (sunubrt.sn) et Dakar Dem Dikk
 -- (demdikk.sn/reseau-urbain-dakar), pages de lignes AFTU référencées par
