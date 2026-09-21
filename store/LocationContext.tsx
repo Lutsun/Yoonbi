@@ -32,6 +32,8 @@ export type UserPosition = {
   longitude: number;
   /** Rayon d'incertitude en mètres, tel que rapporté par le téléphone. */
   accuracy: number | null;
+  /** Cap de déplacement en degrés (0 = nord), ou null à l'arrêt / si inconnu. */
+  heading: number | null;
   timestamp: number;
 };
 
@@ -55,6 +57,8 @@ function toPosition(loc: Location.LocationObject): UserPosition {
     latitude: loc.coords.latitude,
     longitude: loc.coords.longitude,
     accuracy: loc.coords.accuracy ?? null,
+    heading:
+      loc.coords.heading != null && loc.coords.heading >= 0 ? loc.coords.heading : null,
     timestamp: loc.timestamp,
   };
 }

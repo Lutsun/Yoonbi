@@ -203,6 +203,9 @@ export default function HomeScreen() {
       {
         center: { latitude: position.latitude, longitude: position.longitude },
         zoom: NAVIGATION_ZOOM,
+        // La carte s'oriente dans le sens de la marche, comme un GPS.
+        ...(position.heading != null ? { heading: position.heading } : {}),
+        pitch: 45,
       },
       { duration: 700 }
     );
@@ -264,16 +267,54 @@ export default function HomeScreen() {
 
         {activeTrip && (
           <>
-            {activeTrip.plan.segments.map((segment, index) => (
-              <Polyline
-                key={index}
-                coordinates={segment.path}
-                strokeColor={segment.type === 'ride' ? segment.lineColor : c.inkFaint}
-                strokeWidth={segment.type === 'ride' ? 6 : 4}
-                lineDashPattern={segment.type === 'walk' ? [6, 6] : undefined}
-                lineCap="round"
-              />
-            ))}
+            {activeTrip.plan.segments.map((segment, index) => {
+              const done = nav != null && index < nav.stepIndex;
+              const current = nav != null && index === nav.stepIndex;
+              const color = segment.type === 'ride' ? segment.lineColor : c.inkFaint;
+              return (
+                <React.Fragment key={index}>
+                  {/* Liseré blanc : l'étape en cours ressort sur la carte. */}
+                  {current && (
+                    <Polyline
+                      coordinates={segment.path}
+                      strokeColor="#FFFFFF"
+                      strokeWidth={13}
+                      lineCap="round"
+                    />
+                  )}
+                  <Polyline
+                    coordinates={segment.path}
+                    strokeColor={done ? `${color}55` : color}
+                    strokeWidth={current ? 9 : segment.type === 'ride' ? 6 : 4}
+                    lineDashPattern={segment.type === 'walk' ? [6, 6] : undefined}
+                    lineCap="round"
+                  />
+                </React.Fragment>
+              );
+            })}
+
+            {/* Prochaine action, épinglée sur la carte : où monter, où descendre. */}
+            {nav && !nav.arrived && activeTrip.plan.segments[nav.stepIndex] && (
+              <Marker
+                coordinate={
+                  activeTrip.plan.segments[nav.stepIndex].path[
+                    activeTrip.plan.segments[nav.stepIndex].path.length - 1
+                  ]
+                }
+                anchor={{ x: 0.5, y: 1 }}
+              >
+                <View style={styles.actionPin}>
+                  <Text style={styles.actionPinText} numberOfLines={1}>
+                    {(() => {
+                      const seg = activeTrip.plan.segments[nav.stepIndex];
+                      return seg.type === 'ride'
+                        ? `Descends à ${seg.alightStopName}`
+                        : `Rejoins ${seg.toStopName}`;
+                    })()}
+                  </Text>
+                </View>
+              </Marker>
+            )}
 
             <Marker coordinate={activeTrip.origin} anchor={{ x: 0.5, y: 0.5 }}>
               <View style={styles.originPin}>
@@ -646,6 +687,15 @@ const createStyles = (c: Palette, isDark: boolean) => {
       borderWidth: 2.5,
       borderColor: c.surface,
     },
+    actionPin: {
+      maxWidth: 220,
+      backgroundColor: c.ink,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      marginBottom: 6,
+    },
+    actionPinText: { fontFamily: Fonts.bodySemi, fontSize: 12, color: c.canvas },
     callout: { minWidth: 150, padding: Spacing.xs },
     calloutTitle: { fontFamily: Fonts.bodySemi, fontSize: 13, color: '#101828' },
     calloutLines: { fontFamily: Fonts.body, fontSize: 11, color: '#475467', marginTop: 2 },
