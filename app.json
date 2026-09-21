@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Yonnma",
-    "slug": "Yonnma",
+    "name": "Yonnbi",
+    "slug": "Yonnbi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Yonnma"
+      "bundleIdentifier": "com.anonymous.Yonnbi"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +36,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Yonnma utilise ta position pour te montrer les arrêts de bus autour de toi, calculer ton itinéraire depuis l’endroit où tu te trouves et te guider jusqu’à destination.",
+          "locationWhenInUsePermission": "Yonnbi utilise ta position pour te montrer les arrêts de bus autour de toi, calculer ton itinéraire depuis l’endroit où tu te trouves et te guider jusqu’à destination.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
           "motionUsagePermission": false,
@@ -44,6 +44,6 @@
         }
       ]
     ],
-    "scheme": "yonnma"
+    "scheme": "yonnbi"
   }
 }
