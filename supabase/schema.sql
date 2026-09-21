@@ -1,4 +1,4 @@
--- Yonnbi — schéma de base de données
+-- Yoonbi — schéma de base de données
 --
 -- À exécuter dans l'éditeur SQL de ton projet Supabase (Project > SQL Editor
 -- > New query), ou via `supabase db push` si tu utilises la CLI plus tard.
@@ -8,7 +8,7 @@
 --   lines           -> les lignes de bus (ex: "Ligne 40", "B1")
 --   stops           -> les arrêts, avec leur position GPS (PostGIS)
 --   line_stops      -> l'ordre des arrêts sur chaque ligne
---   profiles        -> infos Yonnbi (nom, ville) liées à un compte Supabase Auth
+--   profiles        -> infos Yoonbi (nom, ville) liées à un compte Supabase Auth
 --   user_trips      -> les trajets recherchés / enregistrés par un utilisateur
 --   favorite_lines  -> les lignes de bus mises en favori par un utilisateur
 
@@ -232,7 +232,7 @@ $$;
 -- Vraie authentification Supabase Auth (téléphone + code SMS, voir
 -- Authentication > Providers > Phone dans le dashboard) — pas de mot de
 -- passe, pas d'e-mail requis. Chaque compte est un vrai `auth.users`;
--- `profiles` ne stocke que les infos propres à Yonnbi (nom, ville), liées
+-- `profiles` ne stocke que les infos propres à Yoonbi (nom, ville), liées
 -- par le même id. Le téléphone n'est pas dupliqué ici : il vit déjà dans
 -- `auth.users` et l'app le lit via `session.user.phone`.
 create table if not exists profiles (

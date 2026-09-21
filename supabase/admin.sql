@@ -1,4 +1,4 @@
--- Yonnbi — droits d'administration (console web, dossier admin/)
+-- Yoonbi — droits d'administration (console web, dossier admin/)
 --
 -- À exécuter APRÈS schema.sql, dans l'éditeur SQL Supabase. Rejouable.
 --
@@ -198,7 +198,7 @@ begin
 end;
 $$;
 
--- Liste des comptes Yonnbi. `security definer` est nécessaire pour lire le
+-- Liste des comptes Yoonbi. `security definer` est nécessaire pour lire le
 -- téléphone (dans auth.users, jamais dupliqué dans profiles) et compter les
 -- trajets/favoris de chacun — mais seul un admin peut appeler cette fonction,
 -- et elle ne renvoie rien à un compte qui ne l'est pas.

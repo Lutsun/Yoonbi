@@ -1,4 +1,4 @@
--- Yonnbi — tracés de lignes relevés sur le terrain
+-- Yoonbi — tracés de lignes relevés sur le terrain
 --
 -- Source : OpenStreetMap (© les contributeurs OpenStreetMap), extrait via
 -- l'API Overpass le 2026-09-16 sur l'emprise de Dakar.

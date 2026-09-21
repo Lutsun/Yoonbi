@@ -1,4 +1,4 @@
--- Yonnbi — migration ponctuelle vers Supabase Auth
+-- Yoonbi — migration ponctuelle vers Supabase Auth
 --
 -- À exécuter UNE SEULE FOIS, dans l'éditeur SQL Supabase, AVANT de
 -- ré-exécuter schema.sql. Utile uniquement si ton projet a déjà l'ancienne
