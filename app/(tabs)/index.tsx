@@ -38,7 +38,7 @@ import { distanceKm } from '../../utils/eta';
 // Niveau de zoom pendant le guidage : assez serré pour voir la rue suivante.
 const NAVIGATION_ZOOM = 16.5;
 const BROWSING_ZOOM = 15;
-const KEEP_AWAKE_TAG = 'yonnbi-guidance';
+const KEEP_AWAKE_TAG = 'yoonbi-guidance';
 
 const DAKAR_REGION: Region = {
   latitude: 14.6928,
@@ -58,7 +58,7 @@ const LOCATION_BLOCKERS: Partial<
   },
   denied: {
     icon: 'location-outline',
-    text: 'Yonnbi n’a pas accès à ta position. Active-la dans les Réglages pour être guidé.',
+    text: 'Yoonbi n’a pas accès à ta position. Active-la dans les Réglages pour être guidé.',
     action: 'Ouvrir les Réglages',
   },
   'services-off': {
@@ -238,7 +238,7 @@ export default function HomeScreen() {
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
-        // Masque les commerces d'Apple Maps : seuls les arrêts Yonnbi restent.
+        // Masque les commerces d'Apple Maps : seuls les arrêts Yoonbi restent.
         showsPointsOfInterests={false}
         userInterfaceStyle={isDark ? 'dark' : 'light'}
         // Dès que l'utilisateur déplace la carte, on arrête de la recentrer

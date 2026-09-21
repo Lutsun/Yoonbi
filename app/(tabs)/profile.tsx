@@ -139,7 +139,7 @@ export default function ProfileScreen() {
           <Row styles={styles} colors={c} icon="log-out-outline" label="Se déconnecter" danger onPress={handleLogout} />
         </View>
 
-        <Text style={styles.version}>Yonnbi · version 1.0</Text>
+        <Text style={styles.version}>Yoonbi · version 1.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

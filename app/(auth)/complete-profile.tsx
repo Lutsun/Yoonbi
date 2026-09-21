@@ -81,7 +81,7 @@ export default function CompleteProfileScreen() {
           <View style={{ height: Spacing.xl }} />
 
           <Text style={styles.title}>
-            Bienvenue sur <Text style={styles.titleYonn}>Yonn</Text>bi
+            Bienvenue sur <Text style={styles.titleYonn}>Yoon</Text>bi
           </Text>
           <Text style={styles.subtitle}>Dites-nous comment vous appeler.</Text>
 

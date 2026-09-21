@@ -3,11 +3,11 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Brand, Fonts } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
 
-// Le logo Yonnbi.
+// Le logo Yoonbi.
 //   - `default`  : posé sur un fond d'interface, il suit le thème pour rester
 //                  lisible en clair comme en sombre.
 //   - `inverted` : posé sur le vert de la marque (écran d'ouverture), il garde
-//                  des couleurs figées — « Yonn » blanc, « bi » noir — pour ne
+//                  des couleurs figées — « Yoon » blanc, « bi » noir — pour ne
 //                  jamais changer d'aspect d'un lancement à l'autre.
 export default function Wordmark({
   size = 36,
@@ -23,8 +23,8 @@ export default function Wordmark({
   const biColor = inverted ? Brand.wordmarkInk : c.ink;
 
   return (
-    <View style={styles.row} accessibilityRole="header" accessibilityLabel="Yonnbi">
-      <Text style={[styles.text, { fontSize: size, color: yonnColor }]}>Yonn</Text>
+    <View style={styles.row} accessibilityRole="header" accessibilityLabel="Yoonbi">
+      <Text style={[styles.text, { fontSize: size, color: yonnColor }]}>Yoon</Text>
       <Text style={[styles.text, { fontSize: size, color: biColor }]}>bi</Text>
     </View>
   );
