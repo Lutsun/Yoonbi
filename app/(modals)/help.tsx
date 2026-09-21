@@ -17,7 +17,7 @@ const QUESTIONS: { question: string; answer: string }[] = [
   {
     question: 'Que veut dire « Recommandé » ?',
     answer:
-      'C’est le trajet le plus rapide parmi ceux que Yonnma a trouvés. Tu peux toujours choisir l’autre option si elle t’arrange mieux.',
+      'C’est le trajet le plus rapide parmi ceux que Yonnbi a trouvés. Tu peux toujours choisir l’autre option si elle t’arrange mieux.',
   },
   {
     question: 'Les prix affichés sont-ils exacts ?',
@@ -27,7 +27,7 @@ const QUESTIONS: { question: string; answer: string }[] = [
   {
     question: 'Pourquoi mon point n’est pas au bon endroit ?',
     answer:
-      'Vérifie que la position précise est activée pour Yonnma dans les Réglages de ton téléphone. En position approximative, iOS ne donne qu’une zone de plusieurs kilomètres.',
+      'Vérifie que la position précise est activée pour Yonnbi dans les Réglages de ton téléphone. En position approximative, iOS ne donne qu’une zone de plusieurs kilomètres.',
   },
   {
     question: 'Comment retrouver un trajet plus tard ?',

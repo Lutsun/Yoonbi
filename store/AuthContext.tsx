@@ -10,7 +10,7 @@ type AuthContextValue = {
   isLoggedIn: boolean;
   isRestoring: boolean;
   // Un numéro a été vérifié par SMS (vraie session Supabase Auth) mais
-  // n'a pas encore de profil Yonnma (nom/ville) : direction complete-profile.
+  // n'a pas encore de profil Yonnbi (nom/ville) : direction complete-profile.
   needsProfile: boolean;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;

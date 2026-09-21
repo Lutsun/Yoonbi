@@ -1,6 +1,6 @@
-# Yonnma
+# Yonnbi
 
-**Yonnma** est une application mobile qui accompagne les usagers dans leurs déplacements quotidiens à Dakar, en leur proposant les meilleurs itinéraires à travers les transports publics sénégalais :
+**Yonnbi** est une application mobile qui accompagne les usagers dans leurs déplacements quotidiens à Dakar, en leur proposant les meilleurs itinéraires à travers les transports publics sénégalais :
 
 - 🚌 Tata AFTU
 - 🚌 Dakar Dem Dikk
@@ -13,7 +13,7 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 
 - **Connexion par numéro de téléphone** — un code reçu par SMS, sans mot de passe ni e-mail à retenir. Vraie authentification Supabase Auth (pas de comptes faits main) : sessions sécurisées, rafraîchissement automatique, et permissions filtrées par utilisateur (Row Level Security via `auth.uid()`)
 - **Écran d'accueil avec carte en direct** — la position de l'utilisateur, les arrêts de bus autour de lui et les lignes qui les desservent
-- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yonnma calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`)
+- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yonnbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`)
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
 
 ## Stack technique
@@ -52,7 +52,7 @@ admin/                  Console web d'administration (React + Vite) — voir adm
 
 Le schéma (`supabase/schema.sql`) est volontairement simple : sept tables (`operators`, `lines`, `stops`, `line_stops`, `profiles`, `user_trips`, `favorite_lines`) plus des fonctions PostGIS — dont `nearby_stops(lat, lng)` (arrêts les plus proches d'un point) et `get_route_graph()`, qui renvoie tout le réseau (lignes + arrêts dans l'ordre + tarifs) en un seul appel : c'est ce que le planificateur d'itinéraire utilise pour construire son graphe de trajet et calculer le meilleur chemin (algorithme de Dijkstra, `services/routing.ts`).
 
-`profiles` ne stocke que les infos propres à Yonnma (nom, ville) — les comptes eux-mêmes sont de vrais comptes **Supabase Auth** (téléphone + code SMS), pas une table maison. Chaque table sensible (`profiles`, `user_trips`, `favorite_lines`) est protégée par des policies Row Level Security basées sur `auth.uid()` : un utilisateur ne peut lire ou modifier que ses propres données.
+`profiles` ne stocke que les infos propres à Yonnbi (nom, ville) — les comptes eux-mêmes sont de vrais comptes **Supabase Auth** (téléphone + code SMS), pas une table maison. Chaque table sensible (`profiles`, `user_trips`, `favorite_lines`) est protégée par des policies Row Level Security basées sur `auth.uid()` : un utilisateur ne peut lire ou modifier que ses propres données.
 
 ### D'où viennent les données de transport
 

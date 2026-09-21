@@ -1,4 +1,4 @@
-// Planificateur d'itinéraire — la fonctionnalité principale de Yonnma.
+// Planificateur d'itinéraire — la fonctionnalité principale de Yonnbi.
 //
 // Construit un graphe de trajet à partir du réseau complet (toutes les
 // lignes et leurs arrêts, voir get_route_graph dans supabase/schema.sql),

@@ -7,7 +7,7 @@ import { darkColors, lightColors, makeElevation, Palette } from '../constants/th
 // Trois choix : suivre le réglage du téléphone, ou forcer clair / sombre.
 export type ThemeMode = 'system' | 'light' | 'dark';
 
-const STORAGE_KEY = 'yonnma_theme_mode';
+const STORAGE_KEY = 'yonnbi_theme_mode';
 
 type ThemeContextValue = {
   mode: ThemeMode;

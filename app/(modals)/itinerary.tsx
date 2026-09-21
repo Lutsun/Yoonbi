@@ -38,7 +38,7 @@ type Field = 'origin' | 'destination';
 type Outcome = 'none' | 'no-path' | 'same-stop' | 'error' | 'no-location';
 
 const OUTCOME_MESSAGE: Record<Exclude<Outcome, 'none'>, string> = {
-  'no-path': 'Ces deux arrêts ne sont pas encore reliés dans le réseau Yonnma.',
+  'no-path': 'Ces deux arrêts ne sont pas encore reliés dans le réseau Yonnbi.',
   'same-stop': 'Le départ et la destination sont le même arrêt.',
   error: 'Impossible de calculer l’itinéraire. Vérifie ta connexion.',
   'no-location': 'Active la localisation pour partir de ta position exacte.',

@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { User } from '../types/auth';
 
-// Accès à la table `profiles` de Supabase : les infos propres à Yonnma
+// Accès à la table `profiles` de Supabase : les infos propres à Yonnbi
 // (nom, ville) pour un compte Supabase Auth. Le téléphone n'y est pas
 // stocké — il vient déjà de `auth.users` (session.user.phone).
 

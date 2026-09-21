@@ -1,6 +1,6 @@
 // constants/theme.ts
 //
-// Système de design Yonnma, en deux palettes (claire et sombre).
+// Système de design Yonnbi, en deux palettes (claire et sombre).
 //
 // Principes : une seule couleur d'accent utilisée avec parcimonie, une
 // échelle de gris à trois niveaux pour toute la hiérarchie du texte, et des

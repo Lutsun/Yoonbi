@@ -117,7 +117,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
             >
               <Text style={styles.switchText}>
-                {isSignup ? 'J’ai déjà un compte · ' : 'Nouveau sur Yonnma ? '}
+                {isSignup ? 'J’ai déjà un compte · ' : 'Nouveau sur Yonnbi ? '}
                 <Text style={styles.switchLink}>
                   {isSignup ? 'Se connecter' : 'Créer un compte'}
                 </Text>
@@ -127,7 +127,7 @@ export default function LoginScreen() {
             <Text style={styles.consent}>
               En continuant, vous acceptez les{' '}
               <Text style={styles.link}>Conditions d'utilisation</Text> et la{' '}
-              <Text style={styles.link}>Politique de confidentialité</Text> de Yonnma.
+              <Text style={styles.link}>Politique de confidentialité</Text> de Yonnbi.
             </Text>
           </View>
         </ScrollView>
