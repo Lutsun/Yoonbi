@@ -104,6 +104,10 @@ export default function LoginScreen() {
             {!!error && <Text style={styles.error}>{error}</Text>}
           </View>
 
+          {/* Espace élastique : le bouton reste toujours à distance du champ,
+              même quand le clavier réduit la hauteur disponible. */}
+          <View style={styles.gap} />
+
           <View>
             <PrimaryButton
               label={isSignup ? 'Créer mon compte' : 'Recevoir le code'}
@@ -141,11 +145,16 @@ const createStyles = (c: Palette) =>
     safe: { flex: 1, backgroundColor: c.canvas },
     scroll: {
       flexGrow: 1,
-      justifyContent: 'space-between',
+      // Sur grand écran (iPad, paysage), le formulaire reste lisible et centré.
+      width: '100%',
+      maxWidth: 480,
+      alignSelf: 'center',
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.xl,
       paddingBottom: Spacing.xl,
     },
+
+    gap: { flex: 1, minHeight: Spacing.xl },
 
     title: { fontFamily: Fonts.display, fontSize: 28, color: c.ink },
     subtitle: {
