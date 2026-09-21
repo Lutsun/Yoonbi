@@ -24,7 +24,6 @@ const THEME_OPTIONS: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { value: 'system', label: 'Système', icon: 'phone-portrait-outline' },
   { value: 'light', label: 'Clair', icon: 'sunny-outline' },
   { value: 'dark', label: 'Sombre', icon: 'moon-outline' },
 ];
