@@ -15,6 +15,8 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 - **Écran d'accueil avec carte en direct** — la position de l'utilisateur, les arrêts de bus autour de lui et les lignes qui les desservent
 - **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`)
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
+- **Horaires et fréquence par ligne** — amplitude horaire et fréquence de passage sur la fiche de chaque ligne, avec la mention « estimation » quand l'exploitant ne publie pas d'horaire précis (voir `supabase/schema.sql`)
+- **Cache hors-ligne du réseau et du dernier trajet** — le réseau (lignes et arrêts) reste utilisable sans connexion, et un guidage interrompu par une coupure réseau peut être repris au relancement de l'app (voir `services/offlineCache.ts`)
 
 ## Stack technique
 
