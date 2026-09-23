@@ -42,6 +42,15 @@ create unique index if not exists lines_operator_code_idx on lines (operator_id,
 -- d'itinéraire pour estimer le coût total d'un trajet.
 alter table lines add column if not exists fare_fcfa int not null default 200;
 
+-- Horaires et fréquence, affichés sur la fiche ligne : dire non seulement
+-- quelles lignes prendre, mais aussi quand passer à l'arrêt.
+-- `schedule_estimated` distingue un horaire confirmé par l'exploitant (faux)
+-- d'une amplitude générale du réseau donnée à titre indicatif (vrai, par
+-- défaut) — même principe sourcé/estimé que le reste des données du réseau.
+alter table lines add column if not exists hours_label text;
+alter table lines add column if not exists frequency_label text;
+alter table lines add column if not exists schedule_estimated boolean not null default true;
+
 -- 4. Arrêts -------------------------------------------------------------
 create table if not exists stops (
   id uuid primary key default gen_random_uuid(),

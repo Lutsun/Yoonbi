@@ -198,6 +198,31 @@ update lines set fare_fcfa = 400 where operator_id = (select id from operators w
 update lines set fare_fcfa = 200 where operator_id = (select id from operators where short_name = 'DDD');
 update lines set fare_fcfa = 250 where operator_id = (select id from operators where short_name = 'AFTU');
 
+-- Horaires et fréquence -----------------------------------------------
+-- BRT : horaires officiels par ligne, sunubrt.sn (relevé le 2026-09-23).
+update lines set
+  hours_label = 'Lun-Dim · 6h-21h',
+  frequency_label = 'Lun-Sam : toutes les 6 min · Dim/fériés : 10 min puis 7 min',
+  schedule_estimated = false
+where operator_id = (select id from operators where short_name = 'BRT') and code = 'B1';
+
+
+-- Dakar Dem Dikk et Tata AFTU : le réseau ne publie pas d'horaire par
+-- ligne. Ce qui suit est l'amplitude générale du réseau classique (source :
+-- demdikk.sn et pages de lignes AFTU), pas un horaire confirmé ligne par
+-- ligne — d'où schedule_estimated = true et le mot « Estimation ».
+update lines set
+  hours_label = 'Estimation : tous les jours · 6h-20h',
+  frequency_label = 'Estimation : toutes les 20 à 35 min',
+  schedule_estimated = true
+where operator_id = (select id from operators where short_name = 'DDD');
+
+update lines set
+  hours_label = 'Estimation : tous les jours · 6h-21h',
+  frequency_label = 'Fréquence variable, plus dense aux heures de pointe (7h-9h, 17h-19h)',
+  schedule_estimated = true
+where operator_id = (select id from operators where short_name = 'AFTU');
+
 -- 4.1 Nouveaux arrêts --------------------------------------------------
 insert into stops (name, location) values
   ('UCAD', st_setsrid(st_point(-17.4603, 14.6928), 4326)),

@@ -12,6 +12,12 @@ export type Line = {
   name: string;
   color: string | null;
   fare_fcfa?: number;
+  /** Amplitude horaire lisible, ex. "Lun-Dim · 6h-21h" — absente si inconnue. */
+  hours_label?: string | null;
+  /** Fréquence de passage lisible, ex. "Toutes les 6 min" — absente si inconnue. */
+  frequency_label?: string | null;
+  /** Faux seulement pour un horaire confirmé par l'exploitant (voir schema.sql). */
+  schedule_estimated?: boolean;
 };
 
 export type Stop = {

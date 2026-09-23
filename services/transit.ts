@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Line, Operator, RouteGraphRow, Stop } from '../types/transit';
+import { loadNetworkCache, saveNetworkCache } from './offlineCache';
 
 export async function getOperators(): Promise<Operator[]> {
   const { data, error } = await supabase.from('operators').select('*');
@@ -9,6 +10,14 @@ export async function getOperators(): Promise<Operator[]> {
 
 export async function getLines(): Promise<Line[]> {
   const { data, error } = await supabase.from('lines').select('*');
+  if (error) throw error;
+  return data;
+}
+
+// Une ligne précise, avec ses horaires — utilisé par la fiche ligne
+// (app/(modals)/bus-details.tsx).
+export async function getLine(lineId: string): Promise<Line> {
+  const { data, error } = await supabase.from('lines').select('*').eq('id', lineId).single();
   if (error) throw error;
   return data;
 }
@@ -50,7 +59,18 @@ export async function getNearbyStops(
 // la fonction PostGIS `get_route_graph` — utilisé par le planificateur
 // d'itinéraire (services/routing.ts) pour construire son graphe de trajet.
 export async function getRouteGraph(): Promise<RouteGraphRow[]> {
-  const { data, error } = await supabase.rpc('get_route_graph');
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase.rpc('get_route_graph');
+    if (error) throw error;
+    // Mis à jour à chaque appel réussi : le secours hors-ligne reste le
+    // dernier réseau vraiment vu, jamais un instantané figé au premier lancement.
+    saveNetworkCache(data);
+    return data;
+  } catch (err) {
+    // Hors-ligne (ou Supabase injoignable) : on retombe sur le dernier
+    // réseau connu plutôt que de bloquer tout le planificateur d'itinéraire.
+    const cached = await loadNetworkCache();
+    if (cached) return cached;
+    throw err;
+  }
 }

@@ -340,3 +340,9 @@ from (values
   ('Papa Gueye Fall', 7)
 ) as v(name, seq)
 join stops s on s.name = v.name;
+
+update lines set
+  hours_label = 'Lun-Ven · heures de pointe (7h-11h, 16h-20h)',
+  frequency_label = null,
+  schedule_estimated = false
+where operator_id = (select id from operators where short_name = 'BRT') and code = 'B3';
