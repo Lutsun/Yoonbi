@@ -2,13 +2,14 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import EmptyState from '../../components/ui/EmptyState';
 import ScreenHeader from '../../components/ui/ScreenHeader';
 import { Fonts, Radii, Spacing, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
-import { getLineStops } from '../../services/transit';
-import { Stop } from '../../types/transit';
+import { getLine, getLineStops } from '../../services/transit';
+import { Line, Stop } from '../../types/transit';
 
 export default function BusDetailsScreen() {
   const c = useColors();
@@ -21,14 +22,19 @@ export default function BusDetailsScreen() {
   }>();
 
   const [stops, setStops] = useState<Stop[]>([]);
+  const [line, setLine] = useState<Line | null>(null);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
   const lineColor = color || c.yonn;
 
   useEffect(() => {
     let cancelled = false;
-    getLineStops(lineId)
-      .then((data) => !cancelled && setStops(data))
+    Promise.all([getLineStops(lineId), getLine(lineId).catch(() => null)])
+      .then(([stopsData, lineData]) => {
+        if (cancelled) return;
+        setStops(stopsData);
+        setLine(lineData);
+      })
       .catch(() => !cancelled && setErrored(true))
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -48,6 +54,28 @@ export default function BusDetailsScreen() {
           <Text style={styles.summaryText}>
             {stops.length} arrêts · {stops[0].name} → {stops[stops.length - 1].name}
           </Text>
+        </View>
+      )}
+
+      {!loading && !errored && (line?.hours_label || line?.frequency_label) && (
+        <View style={styles.schedule}>
+          {!!line.hours_label && (
+            <View style={styles.scheduleRow}>
+              <Ionicons name="time-outline" size={16} color={c.inkMuted} />
+              <Text style={styles.scheduleText}>{line.hours_label}</Text>
+            </View>
+          )}
+          {!!line.frequency_label && (
+            <View style={styles.scheduleRow}>
+              <Ionicons name="repeat-outline" size={16} color={c.inkMuted} />
+              <Text style={styles.scheduleText}>{line.frequency_label}</Text>
+            </View>
+          )}
+          {line.schedule_estimated && (
+            <Text style={styles.scheduleNote}>
+              Amplitude estimée : l'exploitant ne publie pas d'horaire précis pour cette ligne.
+            </Text>
+          )}
         </View>
       )}
 
@@ -128,6 +156,20 @@ const createStyles = (c: Palette) =>
   },
   badgeText: { fontFamily: Fonts.bodySemi, fontSize: 13, color: c.surface },
   summaryText: { flex: 1, fontFamily: Fonts.body, fontSize: 13, color: c.inkMuted },
+
+  schedule: {
+    gap: Spacing.xs,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: c.surface,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    borderColor: c.line,
+  },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  scheduleText: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: c.ink },
+  scheduleNote: { fontFamily: Fonts.body, fontSize: 11, color: c.inkFaint, marginTop: 2 },
 
   list: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
   stopRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
