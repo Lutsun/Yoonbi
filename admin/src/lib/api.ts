@@ -59,6 +59,9 @@ export async function saveLine(line: Omit<Line, 'id'> & { id?: string }): Promis
     name: line.name.trim(),
     color: line.color || null,
     fare_fcfa: line.fare_fcfa,
+    hours_label: line.hours_label || null,
+    frequency_label: line.frequency_label || null,
+    schedule_estimated: line.schedule_estimated,
   };
   if (line.id) {
     const { error } = await supabase.from('lines').update(payload).eq('id', line.id);

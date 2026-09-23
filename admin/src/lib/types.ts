@@ -12,6 +12,9 @@ export type Line = {
   name: string;
   color: string | null;
   fare_fcfa: number;
+  hours_label: string | null;
+  frequency_label: string | null;
+  schedule_estimated: boolean;
 };
 
 export type Stop = {

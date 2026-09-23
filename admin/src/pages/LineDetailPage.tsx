@@ -18,6 +18,9 @@ const EMPTY_LINE: Omit<Line, 'id'> = {
   name: '',
   color: '',
   fare_fcfa: 200,
+  hours_label: '',
+  frequency_label: '',
+  schedule_estimated: true,
 };
 
 export default function LineDetailPage() {
@@ -167,6 +170,31 @@ export default function LineDetailPage() {
                 value={line.color || '#12B76A'}
                 onChange={(e) => setLine({ ...line, color: e.target.value })}
               />
+            </label>
+            <label className="field">
+              <span>Amplitude horaire (ex : « Lun-Dim · 6h-21h »)</span>
+              <input
+                value={line.hours_label ?? ''}
+                onChange={(e) => setLine({ ...line, hours_label: e.target.value })}
+                placeholder="Non renseignée"
+              />
+            </label>
+            <label className="field">
+              <span>Fréquence (ex : « Toutes les 15 min »)</span>
+              <input
+                value={line.frequency_label ?? ''}
+                onChange={(e) => setLine({ ...line, frequency_label: e.target.value })}
+                placeholder="Non renseignée"
+              />
+            </label>
+            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={line.schedule_estimated}
+                onChange={(e) => setLine({ ...line, schedule_estimated: e.target.checked })}
+                style={{ width: 'auto' }}
+              />
+              <span>Horaire estimé (pas confirmé par l'exploitant)</span>
             </label>
 
             {saveError && (
