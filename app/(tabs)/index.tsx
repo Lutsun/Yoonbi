@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const { colors: c, isDark } = useTheme();
   const styles = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const { user } = useAuth();
-  const { activeTrip, clearActiveTrip } = useTrip();
+  const { activeTrip, clearActiveTrip, resumableTrip, resumeLastTrip, dismissResumableTrip } = useTrip();
   const { status, position, precise, request } = useUserLocation();
   const mapRef = useRef<MapView>(null);
 
@@ -371,6 +371,35 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {!activeTrip && resumableTrip && (
+          <View style={styles.resumeCard}>
+            <View style={styles.resumeIcon}>
+              <Ionicons name="play-back" size={16} color={c.yonnDeep} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.resumeTitle}>Trajet interrompu</Text>
+              <Text style={styles.resumeText} numberOfLines={1}>
+                {resumableTrip.origin.name} → {resumableTrip.destination.name}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.resumeDismiss}
+              onPress={dismissResumableTrip}
+              accessibilityRole="button"
+              accessibilityLabel="Ignorer"
+            >
+              <Ionicons name="close" size={16} color={c.inkFaint} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resumeButton}
+              onPress={resumeLastTrip}
+              accessibilityRole="button"
+            >
+              <Text style={styles.resumeButtonText}>Reprendre</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {blocker && (
           <View style={styles.blocker}>
             <View style={styles.blockerIcon}>
@@ -627,6 +656,34 @@ const createStyles = (c: Palette, isDark: boolean) => {
       padding: Spacing.md,
       ...e.floating,
     },
+    resumeCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      backgroundColor: c.surface,
+      borderRadius: Radii.lg,
+      padding: Spacing.sm,
+      marginBottom: Spacing.sm,
+      ...e.floating,
+    },
+    resumeIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: Radii.md,
+      backgroundColor: c.yonnTint,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    resumeTitle: { fontFamily: Fonts.bodySemi, fontSize: 12, color: c.ink },
+    resumeText: { fontFamily: Fonts.body, fontSize: 11, color: c.inkMuted, marginTop: 1 },
+    resumeDismiss: { padding: Spacing.xs },
+    resumeButton: {
+      backgroundColor: c.yonn,
+      borderRadius: Radii.pill,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    resumeButtonText: { fontFamily: Fonts.bodySemi, fontSize: 12, color: c.canvas },
     blockerIcon: {
       width: 40,
       height: 40,
