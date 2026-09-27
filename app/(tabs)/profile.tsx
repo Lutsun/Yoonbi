@@ -116,6 +116,27 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        <Text style={styles.sectionLabel}>Raccourcis</Text>
+        <View style={styles.card}>
+          <Row
+            styles={styles}
+            colors={c}
+            icon="home-outline"
+            label="Domicile"
+            value={user.home?.label ?? 'Non défini'}
+            onPress={() => router.push({ pathname: '/(modals)/saved-place', params: { kind: 'home' } })}
+          />
+          <View style={styles.separator} />
+          <Row
+            styles={styles}
+            colors={c}
+            icon="briefcase-outline"
+            label="Travail"
+            value={user.work?.label ?? 'Non défini'}
+            onPress={() => router.push({ pathname: '/(modals)/saved-place', params: { kind: 'work' } })}
+          />
+        </View>
+
         <View style={styles.card}>
           <Row
             styles={styles}
@@ -147,6 +168,7 @@ export default function ProfileScreen() {
 function Row({
   icon,
   label,
+  value,
   onPress,
   danger,
   styles,
@@ -154,6 +176,7 @@ function Row({
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  value?: string;
   onPress: () => void;
   danger?: boolean;
   styles: ReturnType<typeof createStyles>;
@@ -165,6 +188,11 @@ function Row({
         <Ionicons name={icon} size={18} color={danger ? colors.danger : colors.yonn} />
       </View>
       <Text style={[styles.rowLabel, danger && { color: colors.danger }]}>{label}</Text>
+      {!!value && (
+        <Text style={styles.rowValue} numberOfLines={1}>
+          {value}
+        </Text>
+      )}
       {!danger && <Ionicons name="chevron-forward" size={17} color={colors.inkFaint} />}
     </TouchableOpacity>
   );
@@ -262,6 +290,7 @@ const createStyles = (c: Palette) =>
   },
   rowIconDanger: { backgroundColor: c.dangerTint },
   rowLabel: { flex: 1, fontFamily: Fonts.bodySemi, fontSize: 15, color: c.ink },
+  rowValue: { fontFamily: Fonts.body, fontSize: 13, color: c.inkMuted, maxWidth: 130, marginRight: Spacing.xs },
 
   version: {
     fontFamily: Fonts.body,
