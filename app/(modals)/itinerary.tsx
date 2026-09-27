@@ -30,6 +30,7 @@ import {
 } from '../../services/routing';
 import { useUserLocation } from '../../store/LocationContext';
 import { useTrip } from '../../store/TripContext';
+import { useAuth } from '../../store/AuthContext';
 import { Stop, TripPlan } from '../../types/transit';
 import { formatDistance } from '../../utils/eta';
 
@@ -48,6 +49,8 @@ const OUTCOME_MESSAGE: Record<Exclude<Outcome, 'none'>, string> = {
 };
 
 const PLACE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  home: 'home',
+  work: 'briefcase',
   hospital: 'medkit',
   pharmacy: 'medical',
   townhall: 'business',
@@ -66,6 +69,37 @@ function placeIcon(category?: string): keyof typeof Ionicons.glyphMap {
   return (category && PLACE_ICONS[category]) || 'location';
 }
 
+// Domicile et travail enregistrés (store/AuthContext, réglés depuis le
+// profil) — présentés comme deux raccourcis, pas comme des lieux parmi
+// d'autres : le nom affiché est le rôle (« Domicile »), le sous-titre est
+// l'adresse enregistrée.
+function savedPlaceShortcuts(user: ReturnType<typeof useAuth>['user']): Stop[] {
+  const shortcuts: Stop[] = [];
+  if (user?.home) {
+    shortcuts.push({
+      id: 'saved-home',
+      name: 'Domicile',
+      subtitle: user.home.label,
+      category: 'home',
+      isPlace: true,
+      latitude: user.home.latitude,
+      longitude: user.home.longitude,
+    });
+  }
+  if (user?.work) {
+    shortcuts.push({
+      id: 'saved-work',
+      name: 'Travail',
+      subtitle: user.work.label,
+      category: 'work',
+      isPlace: true,
+      latitude: user.work.latitude,
+      longitude: user.work.longitude,
+    });
+  }
+  return shortcuts;
+}
+
 export default function ItineraryScreen() {
   const router = useRouter();
   const c = useColors();
@@ -82,6 +116,7 @@ export default function ItineraryScreen() {
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>('none');
 
+  const { user } = useAuth();
   // Position GPS réelle, partagée avec la carte (store/LocationContext).
   const { status: locationStatus, position, request: requestLocation } = useUserLocation();
   // Le départ est « Ma position » : le trajet partira des coordonnées exactes
@@ -110,18 +145,25 @@ export default function ItineraryScreen() {
     return () => clearTimeout(debounceRef.current);
   }, [activeField, originText, destinationText]);
 
-  // Champ vide : on propose les arrêts autour de la position réelle.
+  // Champ vide : on propose Domicile/Travail (destination uniquement — un
+  // trajet démarre presque toujours d'où l'on se trouve, pas de chez soi) et
+  // les arrêts autour de la position réelle.
   useEffect(() => {
     const text = activeField === 'origin' ? originText : destinationText;
-    const around = position ?? (originIsUser ? null : origin);
-    if (!activeField || text.trim() || !around) {
+    if (!activeField || text.trim()) {
       setSuggestions([]);
       return;
     }
+    const shortcuts = activeField === 'destination' ? savedPlaceShortcuts(user) : [];
+    const around = position ?? (originIsUser ? null : origin);
+    if (!around) {
+      setSuggestions(shortcuts);
+      return;
+    }
     getNearbyStops(around.latitude, around.longitude, 3000)
-      .then((s) => setSuggestions(s.filter((x) => x.id !== origin?.id).slice(0, 6)))
-      .catch(() => setSuggestions([]));
-  }, [activeField, originText, destinationText, origin, originIsUser, position]);
+      .then((s) => setSuggestions([...shortcuts, ...s.filter((x) => x.id !== origin?.id)].slice(0, 8)))
+      .catch(() => setSuggestions(shortcuts));
+  }, [activeField, originText, destinationText, origin, originIsUser, position, user]);
 
   const useMyPosition = () => {
     if (locationStatus !== 'ready' && locationStatus !== 'locating') {
@@ -371,7 +413,7 @@ export default function ItineraryScreen() {
         {!!activeField && list.length > 0 && (
           <>
             <Text style={styles.listLabel}>
-              {listIsSuggestions ? 'Arrêts autour de toi' : 'Arrêts et lieux'}
+              {listIsSuggestions ? 'Suggestions' : 'Arrêts et lieux'}
             </Text>
             {list.map((stop) => (
               <TouchableOpacity
