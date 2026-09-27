@@ -17,6 +17,11 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import TripSteps from '../../components/trip/TripSteps';
 import NavigationBanner from '../../components/trip/NavigationBanner';
 import { computeNavigation, formatMeters, NavigationState } from '../../services/navigation';
+import {
+  dismissGuidanceNotifications,
+  notifyArrived,
+  notifyPrepareToAlight,
+} from '../../services/guidanceNotifications';
 import { useAuth } from '../../store/AuthContext';
 import { useTrip } from '../../store/TripContext';
 import { useTheme } from '../../store/ThemeContext';
@@ -39,6 +44,9 @@ import { distanceKm } from '../../utils/eta';
 const NAVIGATION_ZOOM = 16.5;
 const BROWSING_ZOOM = 15;
 const KEEP_AWAKE_TAG = 'yoonbi-guidance';
+// Distance à laquelle prévenir avant de descendre — le même rayon que la
+// marche de correspondance (voir services/routing.ts).
+const PREPARE_ALIGHT_RADIUS_M = 400;
 
 const DAKAR_REGION: Region = {
   latitude: 14.6928,
@@ -77,7 +85,7 @@ export default function HomeScreen() {
   const { colors: c, isDark } = useTheme();
   const styles = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const { user } = useAuth();
-  const { activeTrip, clearActiveTrip, resumableTrip, resumeLastTrip, dismissResumableTrip } = useTrip();
+  const { activeTrip, clearActiveTrip: clearActiveTripRaw, resumableTrip, resumeLastTrip, dismissResumableTrip } = useTrip();
   const { status, position, precise, request } = useUserLocation();
   const mapRef = useRef<MapView>(null);
 
@@ -88,10 +96,23 @@ export default function HomeScreen() {
   const [nav, setNav] = useState<NavigationState | null>(null);
   // L'avancement doit être monotone : on garde la dernière étape atteinte.
   const stepIndexRef = useRef(0);
+  // Notifications de guidage déjà envoyées pour le trajet en cours — pour ne
+  // prévenir qu'une fois par étape, pas à chaque position reçue.
+  const notifiedTripKeyRef = useRef<string | null>(null);
+  const preparedAlightRef = useRef<Set<number>>(new Set());
+  const arrivedNotifiedRef = useRef(false);
   // La caméra suit l'utilisateur, jusqu'à ce qu'il déplace la carte lui-même.
   const [following, setFollowing] = useState(false);
 
   const hasFix = !!position;
+
+  // On arrête le guidage à la demande de l'utilisateur (bouton « Arrêter »
+  // ou « Terminer ») : dans les deux cas, on efface aussi les notifications
+  // qui pourraient encore traîner dans le centre de notifications.
+  const clearActiveTrip = useCallback(() => {
+    dismissGuidanceNotifications();
+    clearActiveTripRaw();
+  }, [clearActiveTripRaw]);
 
   const loadNearbyStops = useCallback(async (latitude: number, longitude: number) => {
     try {
@@ -194,6 +215,37 @@ export default function HomeScreen() {
     stepIndexRef.current = next.stepIndex;
     setNav(next);
   }, [position, activeTrip]);
+
+  // Rappels de guidage : un seul par étape, jamais un doublon à chaque
+  // position reçue. On repart de zéro dès que la destination change — pas à
+  // chaque replan (le tracé est remplacé une fois par le tracé qui suit les
+  // rues, juste après le départ, avant toute progression réelle).
+  useEffect(() => {
+    if (!activeTrip) return;
+    const key = `${activeTrip.origin.id}:${activeTrip.destination.id}`;
+    if (notifiedTripKeyRef.current !== key) {
+      notifiedTripKeyRef.current = key;
+      preparedAlightRef.current = new Set();
+      arrivedNotifiedRef.current = false;
+    }
+  }, [activeTrip]);
+
+  useEffect(() => {
+    if (!activeTrip || !nav) return;
+    const segment = activeTrip.plan.segments[nav.stepIndex];
+    if (
+      segment?.type === 'ride' &&
+      nav.distanceToNextM <= PREPARE_ALIGHT_RADIUS_M &&
+      !preparedAlightRef.current.has(nav.stepIndex)
+    ) {
+      preparedAlightRef.current.add(nav.stepIndex);
+      notifyPrepareToAlight(segment.alightStopName);
+    }
+    if (nav.arrived && !arrivedNotifiedRef.current) {
+      arrivedNotifiedRef.current = true;
+      notifyArrived(activeTrip.destination.name);
+    }
+  }, [nav, activeTrip]);
 
   // Caméra qui suit, comme un GPS, tant que l'utilisateur n'a pas déplacé la
   // carte lui-même.
