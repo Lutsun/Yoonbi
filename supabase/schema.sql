@@ -251,6 +251,17 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
+-- Domicile et travail — raccourcis de destination affichés sur l'écran
+-- d'itinéraire, sur le principe des apps de VTC : les deux trajets que fait
+-- la plupart des usagers tous les jours ne devraient pas demander de taper
+-- une adresse à chaque fois.
+alter table profiles add column if not exists home_label text;
+alter table profiles add column if not exists home_latitude double precision;
+alter table profiles add column if not exists home_longitude double precision;
+alter table profiles add column if not exists work_label text;
+alter table profiles add column if not exists work_latitude double precision;
+alter table profiles add column if not exists work_longitude double precision;
+
 alter table profiles enable row level security;
 
 drop policy if exists "Lecture de son propre profil" on profiles;
