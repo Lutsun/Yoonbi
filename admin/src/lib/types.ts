@@ -50,8 +50,32 @@ export type Stats = {
   users: number;
   saved_trips: number;
   favorite_lines: number;
+  pending_submissions: number;
   orphan_stops: number;
   short_lines: number;
   lines_by_operator: { operator: string; color: string; lines: number }[];
   popular_lines: { code: string; name: string; operator: string; favorites: number }[];
+};
+
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+export type Submission = {
+  id: string;
+  line_label: string;
+  operator_hint: string | null;
+  fare_fcfa: number | null;
+  note: string | null;
+  status: SubmissionStatus;
+  contributor_name: string;
+  contributor_phone: string;
+  stop_count: number;
+  created_at: string;
+};
+
+export type SubmissionStop = {
+  sequence: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  accuracy_meters: number | null;
 };

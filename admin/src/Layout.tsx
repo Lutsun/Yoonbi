@@ -1,18 +1,28 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Bus, GitBranch, MapPin, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, LogOut } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
+import { getStats } from './lib/api';
 
 const LINKS = [
   { to: '/', label: 'Tableau de bord', end: true, icon: LayoutDashboard },
   { to: '/operateurs', label: 'Opérateurs', icon: Bus },
   { to: '/lignes', label: 'Lignes', icon: GitBranch },
   { to: '/arrets', label: 'Arrêts', icon: MapPin },
+  { to: '/contributions', label: 'Contributions', icon: Inbox },
   { to: '/utilisateurs', label: 'Utilisateurs', icon: Users },
 ];
 
 export default function Layout() {
   const { email, signOut } = useAuth();
   const initial = email?.trim().charAt(0).toUpperCase() || '?';
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    getStats()
+      .then((stats) => setPendingCount(stats.pending_submissions))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="app-shell">
@@ -35,6 +45,9 @@ export default function Layout() {
               >
                 <Icon size={17} />
                 {link.label}
+                {link.to === '/contributions' && pendingCount > 0 && (
+                  <span className="sidebar-link-badge">{pendingCount}</span>
+                )}
               </NavLink>
             );
           })}

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Line, LineStop, Operator, Stats, Stop, YoonbiUser } from './types';
+import type { Line, LineStop, Operator, Stats, Stop, Submission, SubmissionStatus, SubmissionStop, YoonbiUser } from './types';
 
 // Toutes les lectures et écritures de la console passent par ici : les écrans
 // ne parlent jamais directement à Supabase.
@@ -146,4 +146,35 @@ export async function listUsers(): Promise<YoonbiUser[]> {
   const { data, error } = await supabase.rpc('admin_list_users');
   fail(error);
   return data ?? [];
+}
+
+// Contributions des usagers ---------------------------------------------------
+
+export async function listSubmissions(status: SubmissionStatus | null): Promise<Submission[]> {
+  const { data, error } = await supabase.rpc('admin_list_submissions', { p_status: status });
+  fail(error);
+  return data ?? [];
+}
+
+export async function getSubmissionStops(submissionId: string): Promise<SubmissionStop[]> {
+  const { data, error } = await supabase.rpc('admin_get_submission_stops', {
+    p_submission_id: submissionId,
+  });
+  fail(error);
+  return data ?? [];
+}
+
+export async function reviewSubmission(params: {
+  submissionId: string;
+  approve: boolean;
+  reviewNote?: string;
+  lineId?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc('admin_review_submission', {
+    p_submission_id: params.submissionId,
+    p_approve: params.approve,
+    p_review_note: params.reviewNote ?? null,
+    p_line_id: params.lineId ?? null,
+  });
+  fail(error);
 }

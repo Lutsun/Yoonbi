@@ -8,6 +8,7 @@ import {
   Star,
   AlertTriangle,
   TrendingUp,
+  Inbox,
 } from 'lucide-react';
 import { getStats } from '../lib/api';
 import type { Stats } from '../lib/types';
@@ -44,6 +45,7 @@ export default function DashboardPage() {
         <StatCard icon={<Users size={19} />} label="Comptes créés" value={stats.users} />
         <StatCard icon={<Bookmark size={19} />} label="Trajets enregistrés" value={stats.saved_trips} />
         <StatCard icon={<Star size={19} />} label="Lignes en favori" value={stats.favorite_lines} />
+        <StatCard icon={<Inbox size={19} />} label="Contributions en attente" value={stats.pending_submissions} />
       </div>
 
       {(stats.orphan_stops > 0 || stats.short_lines > 0) && (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUp, ArrowDown, X, Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import {
@@ -7,6 +7,7 @@ import {
   getLineStops,
   listOperators,
   listStops,
+  reviewSubmission,
   saveLine,
   setLineStops,
 } from '../lib/api';
@@ -23,10 +24,22 @@ const EMPTY_LINE: Omit<Line, 'id'> = {
   schedule_estimated: true,
 };
 
+type ContributionPrefill = {
+  submissionId: string;
+  name: string;
+  fareFcfa?: number;
+  sequence: { id: string; name: string }[];
+};
+
 export default function LineDetailPage() {
   const { lineId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isNew = lineId === 'nouvelle';
+  // Présent seulement quand on arrive depuis « Valider » sur une
+  // contribution (ContributionDetailPage) : préremplit le formulaire avec
+  // les arrêts déjà créés à partir de la contribution.
+  const prefill = (location.state as { contribution?: ContributionPrefill } | null)?.contribution;
 
   const [operators, setOperators] = useState<Operator[]>([]);
   const [allStops, setAllStops] = useState<Stop[]>([]);
@@ -51,9 +64,19 @@ export default function LineDetailPage() {
         if (cancelled) return;
         setOperators(ops);
         setAllStops(stops);
-        if (existingLine) setLine(existingLine);
-        else if (ops[0]) setLine((l) => ({ ...l, operator_id: ops[0].id }));
-        setSequence(existingStops.map((s) => ({ id: s.id, name: s.name })));
+        if (existingLine) {
+          setLine(existingLine);
+        } else if (prefill) {
+          setLine((l) => ({
+            ...l,
+            operator_id: ops[0]?.id ?? '',
+            name: prefill.name,
+            fare_fcfa: prefill.fareFcfa ?? l.fare_fcfa,
+          }));
+        } else if (ops[0]) {
+          setLine((l) => ({ ...l, operator_id: ops[0].id }));
+        }
+        setSequence(prefill && !existingLine ? prefill.sequence : existingStops.map((s) => ({ id: s.id, name: s.name })));
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false));
@@ -97,6 +120,9 @@ export default function LineDetailPage() {
     try {
       const id = await saveLine(line);
       await setLineStops(id, sequence.map((s) => s.id));
+      if (prefill) {
+        await reviewSubmission({ submissionId: prefill.submissionId, approve: true, lineId: id });
+      }
       setLine((l) => ({ ...l, id }));
       setSaved(true);
       if (isNew) navigate(`/lignes/${id}`, { replace: true });
@@ -126,7 +152,11 @@ export default function LineDetailPage() {
           </button>
         }
         title={isNew ? 'Nouvelle ligne' : `Ligne ${line.code}`}
-        subtitle="Le tracé (ordre des arrêts) détermine ce que le calcul d'itinéraire de l'app propose."
+        subtitle={
+          prefill
+            ? "Arrêts déjà créés à partir d'une contribution — choisis l'opérateur et vérifie l'ordre avant d'enregistrer. La contribution sera marquée validée automatiquement."
+            : "Le tracé (ordre des arrêts) détermine ce que le calcul d'itinéraire de l'app propose."
+        }
       />
 
       <div className="two-col">
