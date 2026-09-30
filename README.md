@@ -47,6 +47,7 @@ supabase/
   migrate_to_auth.sql      Migration ponctuelle (ancienne table `users` faite main -> Supabase Auth)
   seed_osm.sql             Tracés relevés sur le terrain (OpenStreetMap, ODbL)
   admin.sql               Droits d'administration pour la console web (admin/)
+  contributions.sql       Lignes proposées par les usagers, en attente de relecture admin
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
@@ -73,6 +74,12 @@ Dans les deux cas, les **opérateurs, numéros de ligne, terminus et tarifs sont
 
 Pour aller plus loin, la piste la plus solide serait un export GTFS du CETUD (l'autorité organisatrice des transports de Dakar), qui fournirait les tracés et les horaires officiels.
 
+### Contributions des usagers
+
+Couvrir tout le réseau sénégalais depuis des sources publiques est illusoire : beaucoup de lignes n'ont tout simplement pas de données accessibles. Yoonbi permet donc à un usager de signaler une ligne absente, depuis son profil (« Proposer une ligne ») : il marque chaque arrêt au moment où il s'y trouve — un nom à taper, la position captée par le GPS à cet instant, pas un tracé continu à enregistrer.
+
+Ces contributions n'écrivent **jamais** directement dans `lines`/`stops`/`line_stops` : elles vivent dans `line_submissions` / `line_submission_stops` (voir `supabase/contributions.sql`), en attente. Un administrateur les relit dans la console web, choisit le véritable opérateur, corrige si besoin, puis valide — ce qui crée la vraie ligne — ou refuse, avec un motif visible par le contributeur. Rien n'est jamais fusionné automatiquement.
+
 ## Console d'administration
 
 Le réseau (opérateurs, lignes, tracés, arrêts) peut aussi se gérer depuis une interface web, dans [`admin/`](admin/) — une application React séparée qui partage la même base Supabase que l'app mobile, en écriture cette fois. Voir [`admin/README.md`](admin/README.md) pour la mise en route et [`supabase/admin.sql`](supabase/admin.sql) pour donner accès à un compte administrateur.
@@ -94,7 +101,7 @@ cp .env.example .env
 Configuration Supabase :
 
 1. Si tu reviens d'une ancienne version du projet (table `users` faite main) : exécute d'abord `supabase/migrate_to_auth.sql` une seule fois. Sur un projet Supabase tout neuf, passe directement à l'étape 2.
-2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, puis `supabase/seed_osm.sql`.
+2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, puis `supabase/contributions.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
 ```bash
