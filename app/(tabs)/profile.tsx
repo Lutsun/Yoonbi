@@ -155,6 +155,25 @@ export default function ProfileScreen() {
           />
         </View>
 
+        <Text style={styles.sectionLabel}>Contribuer</Text>
+        <View style={styles.card}>
+          <Row
+            styles={styles}
+            colors={c}
+            icon="add-circle-outline"
+            label="Proposer une ligne"
+            onPress={() => router.push('/(modals)/contribute-line')}
+          />
+          <View style={styles.separator} />
+          <Row
+            styles={styles}
+            colors={c}
+            icon="list-outline"
+            label="Mes contributions"
+            onPress={() => router.push('/(modals)/my-submissions')}
+          />
+        </View>
+
         <View style={styles.card}>
           <Row styles={styles} colors={c} icon="log-out-outline" label="Se déconnecter" danger onPress={handleLogout} />
         </View>
