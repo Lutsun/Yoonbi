@@ -4,8 +4,7 @@
 
 - 🚌 Tata AFTU
 - 🚌 Dakar Dem Dikk
-- 🚐 Ndiaga Ndiaye
-- 🚐 Cars rapides
+- 🚌 BRT
 
 L'objectif : rendre le transport en commun sénégalais **simple à comprendre et à utiliser**, y compris pour les usagers peu à l'aise avec la technologie — pas de jargon, pas d'étapes inutiles, une interface directe.
 
