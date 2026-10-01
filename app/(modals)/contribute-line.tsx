@@ -95,7 +95,9 @@ export default function ContributeLineScreen() {
             Un administrateur va la relire avant qu'elle n'apparaisse dans l'app. Tu peux suivre
             son statut depuis ton profil, dans « Mes contributions ».
           </Text>
-          <PrimaryButton label="Terminer" onPress={() => router.back()} />
+          <View style={styles.doneButton}>
+            <PrimaryButton label="Terminer" onPress={() => router.back()} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -300,6 +302,7 @@ const createStyles = (c: Palette) =>
     error: { fontFamily: Fonts.body, fontSize: 12, color: c.danger, marginTop: Spacing.sm },
 
     doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: Spacing.sm },
+    doneButton: { width: '100%' },
     doneIcon: {
       width: 64,
       height: 64,
