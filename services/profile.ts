@@ -61,6 +61,18 @@ export async function createProfile(
   return fromRow(data, phone);
 }
 
+// Modifie le nom et/ou la ville depuis l'écran « Modifier le profil ».
+export async function updateProfile(
+  userId: string,
+  params: { fullName: string; city?: string }
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ full_name: params.fullName.trim(), city: params.city?.trim() || null })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 // Enregistre (ou efface, avec `place = null`) le domicile ou le travail de
 // l'utilisateur — affichés comme raccourcis sur l'écran d'itinéraire.
 export async function setSavedPlace(

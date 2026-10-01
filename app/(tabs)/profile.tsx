@@ -71,7 +71,18 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initialsOf(user.fullName)}</Text>
           </View>
-          <Text style={styles.name}>{user.fullName}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{user.fullName}</Text>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => router.push('/(modals)/edit-profile')}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier le profil"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="pencil" size={14} color={c.yonnDark} />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.phone}>
             +221 {formatPhoneDisplay(user.phone)}
             {user.city ? ` · ${user.city}` : ''}
@@ -236,7 +247,16 @@ const createStyles = (c: Palette) =>
     marginBottom: Spacing.md,
   },
   avatarText: { fontFamily: Fonts.display, fontSize: 26, color: c.yonnDark },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   name: { fontFamily: Fonts.display, fontSize: 22, color: c.ink },
+  editButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: c.yonnTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   phone: { fontFamily: Fonts.body, fontSize: 14, color: c.inkMuted, marginTop: 3 },
 
   stats: {
