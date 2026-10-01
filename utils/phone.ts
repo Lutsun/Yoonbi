@@ -14,7 +14,10 @@ export function isValidSenegalPhone(raw: string): boolean {
 
 export function formatPhoneDisplay(raw: string): string {
   const digits = normalizePhone(raw);
-  return digits.replace(/(\d{2})(?=\d)/g, '$1 ').trim();
+  // Format sénégalais usuel : XX XXX XX XX (ex. "77 720 31 62"), pas des
+  // paires de chiffres qui ignorent la vraie structure du numéro.
+  const match = digits.match(/^(\d{2})(\d{3})(\d{2})(\d{2})$/);
+  return match ? match.slice(1).join(' ') : digits;
 }
 
 export function toE164(raw: string): string {
