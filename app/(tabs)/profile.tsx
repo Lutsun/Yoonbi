@@ -68,21 +68,21 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.identity}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initialsOf(user.fullName)}</Text>
-          </View>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{user.fullName}</Text>
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initialsOf(user.fullName)}</Text>
+            </View>
             <TouchableOpacity
               style={styles.editButton}
               onPress={() => router.push('/(modals)/edit-profile')}
               accessibilityRole="button"
               accessibilityLabel="Modifier le profil"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Ionicons name="pencil" size={14} color={c.yonnDark} />
+              <Ionicons name="pencil" size={13} color={c.canvas} />
             </TouchableOpacity>
           </View>
+          <Text style={styles.name}>{user.fullName}</Text>
           <Text style={styles.phone}>
             +221 {formatPhoneDisplay(user.phone)}
             {user.city ? ` · ${user.city}` : ''}
@@ -237,6 +237,7 @@ const createStyles = (c: Palette) =>
   },
 
   identity: { alignItems: 'center', paddingTop: Spacing.lg, paddingBottom: Spacing.lg },
+  avatarWrap: { marginBottom: Spacing.md },
   avatar: {
     width: 76,
     height: 76,
@@ -244,18 +245,21 @@ const createStyles = (c: Palette) =>
     backgroundColor: c.yonnTint,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
   },
   avatarText: { fontFamily: Fonts.display, fontSize: 26, color: c.yonnDark },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   name: { fontFamily: Fonts.display, fontSize: 22, color: c.ink },
   editButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: c.yonnTint,
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: c.yonn,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: c.canvas,
   },
   phone: { fontFamily: Fonts.body, fontSize: 14, color: c.inkMuted, marginTop: 3 },
 

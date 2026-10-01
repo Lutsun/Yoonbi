@@ -42,6 +42,7 @@ export default function SavedPlaceScreen() {
   const [results, setResults] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -65,11 +66,13 @@ export default function SavedPlaceScreen() {
   const save = async (label: string, latitude: number, longitude: number) => {
     if (!user || saving) return;
     setSaving(true);
+    setError(null);
     try {
       await setSavedPlace(user.id, kind === 'work' ? 'work' : 'home', { label, latitude, longitude });
       await refreshProfile();
       router.back();
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
       setSaving(false);
     }
   };
@@ -94,6 +97,8 @@ export default function SavedPlaceScreen() {
         {loading && <ActivityIndicator size="small" color={c.yonn} />}
       </View>
 
+      {!!error && <Text style={styles.error}>{error}</Text>}
+
       {!query.trim() && (
         <View style={styles.quick}>
           {!!position && (
@@ -117,11 +122,13 @@ export default function SavedPlaceScreen() {
               onPress={async () => {
                 if (!user) return;
                 setSaving(true);
+                setError(null);
                 try {
                   await setSavedPlace(user.id, kind === 'work' ? 'work' : 'home', null);
                   await refreshProfile();
                   router.back();
-                } catch {
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Échec de la suppression.');
                   setSaving(false);
                 }
               }}
@@ -191,6 +198,13 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.fill,
     },
     searchInput: { flex: 1, fontFamily: Fonts.body, fontSize: 15, color: c.ink },
+    error: {
+      fontFamily: Fonts.body,
+      fontSize: 12,
+      color: c.danger,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+    },
 
     quick: { paddingHorizontal: Spacing.lg, gap: Spacing.xs, marginBottom: Spacing.sm },
     quickRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
