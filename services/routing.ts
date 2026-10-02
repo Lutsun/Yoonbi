@@ -56,6 +56,23 @@ function addEdge<T>(map: Map<string, T[]>, fromId: string, edge: T) {
   else map.set(fromId, [edge]);
 }
 
+// Emprise large de Dakar et sa banlieue — un arrêt en dehors (coordonnées
+// nulles, inversées, ou une position GPS aberrante captée pendant une
+// contribution) est exclu du graphe plutôt que de produire un tracé
+// absurde : mieux vaut un arrêt manquant qu'un arrêt affiché en pleine mer.
+const SENEGAL_BOUNDS = { minLat: 12, maxLat: 17, minLng: -18, maxLng: -11 };
+
+function hasValidCoordinates(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= SENEGAL_BOUNDS.minLat &&
+    lat <= SENEGAL_BOUNDS.maxLat &&
+    lng >= SENEGAL_BOUNDS.minLng &&
+    lng <= SENEGAL_BOUNDS.maxLng
+  );
+}
+
 export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
   const stops = new Map<string, GraphStop>();
   const rideEdges = new Map<string, RideEdge[]>();
@@ -63,6 +80,7 @@ export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
 
   const byLine = new Map<string, RouteGraphRow[]>();
   for (const row of rows) {
+    if (!hasValidCoordinates(row.latitude, row.longitude)) continue;
     stops.set(row.stop_id, {
       id: row.stop_id,
       name: row.stop_name,
@@ -198,9 +216,16 @@ function findShortestPath(
   return null;
 }
 
+// Ne devrait jamais arriver (tout `stopId` référencé par une arête vient du
+// même graphe) : si ça arrivait quand même suite à un bug, mieux vaut
+// retomber sur le centre de Dakar — un point qui passe presque inaperçu sur
+// la carte — que sur (0, 0), en pleine mer au large du Ghana.
 function coordOf(graph: RouteGraph, stopId: string) {
   const stop = graph.stops.get(stopId);
-  return { latitude: stop?.latitude ?? 0, longitude: stop?.longitude ?? 0 };
+  return {
+    latitude: stop?.latitude ?? 14.6928,
+    longitude: stop?.longitude ?? -17.4467,
+  };
 }
 
 function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
