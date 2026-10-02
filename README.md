@@ -47,6 +47,7 @@ supabase/
   seed_osm.sql             Tracés relevés sur le terrain (OpenStreetMap, ODbL)
   admin.sql               Droits d'administration pour la console web (admin/)
   contributions.sql       Lignes proposées par les usagers, en attente de relecture admin
+  fix_orphan_stops.sql    Correctif ponctuel : arrêts sans ligne laissés par d'anciens rejeux de seed.sql
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
