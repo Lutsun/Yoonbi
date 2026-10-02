@@ -136,6 +136,18 @@ begin
     raise exception 'Il faut au moins 2 arrêts marqués.' using errcode = 'P0001';
   end if;
 
+  -- Un point hors de cette emprise (GPS resté bloqué sur une position par
+  -- défaut, bug de simulateur...) ne doit jamais devenir un arrêt réel une
+  -- fois validé par un admin.
+  if exists (
+    select 1 from jsonb_array_elements(p_stops) as stop
+    where (stop->>'latitude')::double precision not between 12 and 17
+       or (stop->>'longitude')::double precision not between -18 and -11
+  ) then
+    raise exception 'Un des arrêts marqués est en dehors du Sénégal — vérifie ta position.'
+      using errcode = 'P0001';
+  end if;
+
   insert into line_submissions (submitted_by, line_label, operator_hint, fare_fcfa, note)
   values (auth.uid(), trim(p_line_label), nullif(trim(coalesce(p_operator_hint, '')), ''), p_fare_fcfa, nullif(trim(coalesce(p_note, '')), ''))
   returning id into v_submission_id;
