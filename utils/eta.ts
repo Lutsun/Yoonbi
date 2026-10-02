@@ -28,3 +28,10 @@ export function estimateTripMinutes(km: number): number {
 export function formatDistance(km: number): string {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
 }
+
+// Un trajet à 0 FCFA n'est pas une donnée manquante : c'est un itinéraire
+// entièrement à pied (pas de bus pris). « 0 FCFA » tout seul ressemble à
+// une erreur ; on le dit explicitement pour que ce soit rassurant.
+export function formatFare(totalFareFcfa: number, unit: 'FCFA' | 'F' = 'FCFA'): string {
+  return totalFareFcfa > 0 ? `${totalFareFcfa} ${unit}` : 'Gratuit (à pied)';
+}

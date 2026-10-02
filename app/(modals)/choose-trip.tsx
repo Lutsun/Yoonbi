@@ -11,6 +11,7 @@ import { Fonts, Radii, Spacing, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
 import { useTrip } from '../../store/TripContext';
 import { TripOption } from '../../types/transit';
+import { formatFare } from '../../utils/eta';
 
 export default function ChooseTripScreen() {
   const router = useRouter();
@@ -100,7 +101,7 @@ function OptionCard({
           </View>
         )}
         <View style={{ flex: 1 }} />
-        <Text style={styles.fare}>{plan.totalFareFcfa} FCFA</Text>
+        <Text style={styles.fare}>{formatFare(plan.totalFareFcfa)}</Text>
       </View>
 
       {/* Enchaînement des lignes : ce qu'on prend, dans l'ordre. */}

@@ -91,6 +91,9 @@ export default function HomeScreen() {
 
   const [stops, setStops] = useState<Stop[]>([]);
   const [stopsError, setStopsError] = useState(false);
+  // Le détail étape par étape reste replié par défaut pendant le guidage :
+  // la carte doit rester l'élément principal à l'écran, pas la liste.
+  const [stepsExpanded, setStepsExpanded] = useState(false);
 
   // État du guidage, recalculé à chaque position (voir services/navigation.ts).
   const [nav, setNav] = useState<NavigationState | null>(null);
@@ -184,6 +187,7 @@ export default function HomeScreen() {
   // caméra se met à suivre l'utilisateur.
   useEffect(() => {
     stepIndexRef.current = 0;
+    setStepsExpanded(false);
     if (!activeTrip) {
       setNav(null);
       setFollowing(false);
@@ -492,7 +496,7 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={[
           styles.locateButton,
-          { bottom: sheetBottom + (activeTrip ? 320 : 76) },
+          { bottom: sheetBottom + (activeTrip ? (stepsExpanded ? 320 : 170) : 76) },
           activeTrip && following && styles.locateButtonActive,
         ]}
         onPress={recenter}
@@ -506,7 +510,14 @@ export default function HomeScreen() {
 
       {activeTrip ? (
         <View style={[styles.sheet, { bottom: sheetBottom }]}>
-          <View style={styles.sheetHandle} />
+          <TouchableOpacity
+            style={styles.sheetHandleWrap}
+            onPress={() => setStepsExpanded((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={stepsExpanded ? 'Masquer les étapes' : 'Voir les étapes'}
+          >
+            <View style={styles.sheetHandle} />
+          </TouchableOpacity>
 
           {/* Pendant le guidage, ce qui compte est ce qu'il RESTE, pas les
               totaux du départ : les deux premières valeurs se recalculent à
@@ -526,7 +537,11 @@ export default function HomeScreen() {
             <View style={styles.statDivider} />
             <Stat
               styles={styles}
-              value={`${activeTrip.plan.totalFareFcfa} F`}
+              value={
+                activeTrip.plan.totalFareFcfa > 0
+                  ? `${activeTrip.plan.totalFareFcfa} F`
+                  : 'Gratuit'
+              }
               label="prix"
               color={c.yonnDark}
             />
@@ -539,18 +554,38 @@ export default function HomeScreen() {
             </View>
           )}
 
-          <ScrollView
-            style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetScrollContent}
-            showsVerticalScrollIndicator={false}
+          <TouchableOpacity
+            style={styles.stepsToggle}
+            onPress={() => setStepsExpanded((v) => !v)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
           >
-            <TripSteps
-              origin={activeTrip.origin}
-              destination={activeTrip.destination}
-              segments={activeTrip.plan.segments}
-              activeIndex={nav?.stepIndex ?? -1}
+            <Text style={styles.stepsToggleText}>
+              {stepsExpanded
+                ? 'Masquer les étapes'
+                : `Voir les étapes · ${activeTrip.plan.segments.length + 1}`}
+            </Text>
+            <Ionicons
+              name={stepsExpanded ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={c.inkMuted}
             />
-          </ScrollView>
+          </TouchableOpacity>
+
+          {stepsExpanded && (
+            <ScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <TripSteps
+                origin={activeTrip.origin}
+                destination={activeTrip.destination}
+                segments={activeTrip.plan.segments}
+                activeIndex={nav?.stepIndex ?? -1}
+              />
+            </ScrollView>
+          )}
 
           <TouchableOpacity
             style={[styles.endButton, arrived && styles.endButtonDone]}
@@ -851,6 +886,9 @@ const createStyles = (c: Palette, isDark: boolean) => {
       position: 'absolute',
       left: Spacing.lg,
       right: Spacing.lg,
+      // Replié (par défaut), le panneau ne prend que la place de ses stats
+      // + le bouton : la carte reste l'élément principal. Cette limite ne
+      // joue que si l'utilisateur ouvre lui-même le détail des étapes.
       maxHeight: 400,
       backgroundColor: c.surface,
       borderRadius: Radii.xl,
@@ -859,15 +897,24 @@ const createStyles = (c: Palette, isDark: boolean) => {
       paddingBottom: Spacing.md,
       ...e.floating,
     },
+    sheetHandleWrap: { paddingVertical: Spacing.xs, marginTop: -Spacing.xs },
     sheetHandle: {
       alignSelf: 'center',
       width: 36,
       height: 4,
       borderRadius: 2,
       backgroundColor: c.line,
-      marginBottom: Spacing.md,
     },
-    sheetScroll: { marginTop: Spacing.md },
+    stepsToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      paddingVertical: Spacing.sm,
+      marginTop: Spacing.xs,
+    },
+    stepsToggleText: { fontFamily: Fonts.bodySemi, fontSize: 13, color: c.inkMuted },
+    sheetScroll: { marginTop: Spacing.xs, maxHeight: 220 },
     sheetScrollContent: { paddingBottom: Spacing.xs },
 
     tripStats: {
