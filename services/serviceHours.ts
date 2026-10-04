@@ -54,3 +54,34 @@ export function isRunning(window: ServiceWindow, at: Date): boolean {
   const minutes = at.getHours() * 60 + at.getMinutes();
   return window.ranges.some(([start, end]) => minutes >= start && minutes < end);
 }
+
+/** Prochain début de service à partir de `at` (dans les 7 jours), ou null. */
+export function nextServiceStart(window: ServiceWindow, at: Date): Date | null {
+  const minutesNow = at.getHours() * 60 + at.getMinutes();
+  for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+    const day = new Date(at.getFullYear(), at.getMonth(), at.getDate() + dayOffset);
+    if (!window.days.has(day.getDay())) continue;
+    const starts = window.ranges
+      .map(([start]) => start)
+      .filter((start) => dayOffset > 0 || start > minutesNow)
+      .sort((a, b) => a - b);
+    if (starts.length > 0) {
+      return new Date(day.getFullYear(), day.getMonth(), day.getDate(), Math.floor(starts[0] / 60), starts[0] % 60);
+    }
+  }
+  return null;
+}
+
+const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+/** « aujourd'hui à 16h », « demain à 6h », « lundi à 7h30 ». */
+export function formatServiceStart(start: Date, now: Date): string {
+  const dayDiff = Math.round(
+    (new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime() -
+      new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) /
+      86_400_000
+  );
+  const day = dayDiff === 0 ? 'aujourd’hui' : dayDiff === 1 ? 'demain' : WEEKDAYS[start.getDay()];
+  const minutes = start.getMinutes();
+  return `${day} à ${start.getHours()}h${minutes ? String(minutes).padStart(2, '0') : ''}`;
+}

@@ -104,6 +104,8 @@ export default function ItineraryScreen() {
   const [suggestions, setSuggestions] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>('none');
+  // Précision propre à ce résultat (quelle ligne, quand elle reprend).
+  const [outcomeDetail, setOutcomeDetail] = useState<string | null>(null);
 
   const { user } = useAuth();
   // Position GPS réelle, partagée avec la carte (store/LocationContext).
@@ -231,6 +233,7 @@ export default function ItineraryScreen() {
       );
       if (result.status !== 'ok') {
         setOutcome(result.status);
+        setOutcomeDetail(result.status === 'no-service' ? result.message : null);
         return;
       }
       // Le départ affiché et enregistré est la position de l'utilisateur
@@ -329,7 +332,7 @@ export default function ItineraryScreen() {
         {outcome !== 'none' && (
           <View style={styles.outcome}>
             <Ionicons name="alert-circle-outline" size={18} color={c.danger} />
-            <Text style={styles.outcomeText}>{OUTCOME_MESSAGE[outcome]}</Text>
+            <Text style={styles.outcomeText}>{(outcome === 'no-service' && outcomeDetail) || OUTCOME_MESSAGE[outcome]}</Text>
           </View>
         )}
       </View>

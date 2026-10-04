@@ -8,7 +8,7 @@ import {
   USER_POSITION_ID,
   withEgressWalk,
 } from './routing';
-import { isRunning, parseServiceWindow, ServiceWindow } from './serviceHours';
+import { formatServiceStart, isRunning, nextServiceStart, parseServiceWindow, ServiceWindow } from './serviceHours';
 import { LatLng, RouteGraphRow, Stop, TripOption, TripPlan } from '../types/transit';
 
 // Planification d'un trajet complet, quel que soit le départ (position GPS
@@ -56,8 +56,11 @@ export type JourneyResult =
   | { status: 'ok'; origin: Stop; options: TripOption[] }
   | { status: 'no-path' }
   | { status: 'same-stop' }
-  /** Un trajet existe, mais aucune de ses lignes ne circule à cette heure. */
-  | { status: 'no-service' };
+  /**
+   * Un trajet existe, mais aucune de ses lignes ne circule à cette heure.
+   * `message` dit lesquelles, et quand le service reprend.
+   */
+  | { status: 'no-service'; message: string };
 
 // Arrêts accessibles à pied : d'abord dans un rayon de marche raisonnable,
 // sinon un peu plus loin.
@@ -119,6 +122,43 @@ function withServiceWarning(option: TripOption, net: Network, at: Date): TripOpt
   };
 }
 
+// Quand une option redevient possible : quand TOUTES ses lignes fermées ont
+// repris (null si l'une d'elles n'a pas d'horaire exploitable).
+function resumeOf(option: TripOption, net: Network, closed: Set<string>, at: Date): Date | null {
+  let resume: Date | null = null;
+  for (const segment of option.plan.segments) {
+    if (segment.type !== 'ride' || !closed.has(segment.lineId)) continue;
+    const schedule = net.schedules.get(segment.lineId);
+    const start = schedule ? nextServiceStart(schedule.window, at) : null;
+    if (!start) return null;
+    if (!resume || start > resume) resume = start;
+  }
+  return resume;
+}
+
+// « Le B1 ne circule plus à cette heure — reprise demain à 6h. » On annonce
+// l'option qui redevient possible le plus tôt, pas forcément la plus rapide.
+function noServiceMessage(options: TripOption[], net: Network, closed: Set<string>, at: Date): string {
+  let best = options[0];
+  let bestResume = resumeOf(best, net, closed, at);
+  for (const option of options.slice(1)) {
+    const resume = resumeOf(option, net, closed, at);
+    if (resume && (!bestResume || resume < bestResume)) {
+      best = option;
+      bestResume = resume;
+    }
+  }
+  const codes = [
+    ...new Set(
+      best.plan.segments.flatMap((s) => (s.type === 'ride' && closed.has(s.lineId) ? [s.lineCode] : []))
+    ),
+  ];
+  const subject = codes.length > 1 ? `Les lignes ${codes.join(', ')} ne circulent` : `Le ${codes[0]} ne circule`;
+  return bestResume
+    ? `${subject} plus à cette heure — reprise ${formatServiceStart(bestResume, at)}.`
+    : `${subject} pas à cette heure.`;
+}
+
 export async function planJourney(
   from: JourneyOrigin,
   destination: Stop,
@@ -145,8 +185,23 @@ export async function planJourney(
     // Sans les lignes fermées, plus de trajet : on distingue « pas relié » de
     // « relié, mais pas à cette heure ».
     const anytime = await optionsOn(graphWithout(net, new Set()), origin, position, destination);
-    return anytime !== 'same-stop' && anytime.length > 0 ? { status: 'no-service' } : { status: 'no-path' };
+    if (anytime === 'same-stop' || anytime.length === 0) return { status: 'no-path' };
+    return { status: 'no-service', message: noServiceMessage(anytime, net, closed, at) };
   }
 
-  return { status: 'ok', origin, options: options.map((o) => withServiceWarning(o, net, at)) };
+  return { status: 'ok', origin, options: preferReliable(options.map((o) => withServiceWarning(o, net, at))) };
+}
+
+// Un bus qui ne passe peut-être plus ne doit pas être recommandé s'il ne fait
+// gagner que quelques minutes sur une option sûre (autre ligne, ou à pied).
+const RELIABILITY_MARGIN_MINUTES = 10;
+
+function preferReliable(options: TripOption[]): TripOption[] {
+  const [first, ...rest] = options;
+  if (!first?.warning) return options;
+  const safe = rest.find(
+    (o) => !o.warning && o.plan.totalMinutes <= first.plan.totalMinutes + RELIABILITY_MARGIN_MINUTES
+  );
+  if (!safe) return options;
+  return [safe, first, ...rest.filter((o) => o !== safe)].map((o, i) => ({ ...o, recommended: i === 0 }));
 }

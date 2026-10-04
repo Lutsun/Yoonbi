@@ -351,7 +351,7 @@ export default function HomeScreen() {
         setActiveTrip({ origin: result.origin, destination: trip.destination, plan: result.options[0].plan });
         setRerouteNotice(reason ? `${reason} — nouvel itinéraire` : 'Nouvel itinéraire depuis ta position');
       } else if (result.status === 'no-service') {
-        setRerouteNotice('Plus de bus sur ce trajet à cette heure');
+        setRerouteNotice(result.message);
       } else {
         setRerouteNotice('Aucun autre trajet trouvé depuis ici');
       }
