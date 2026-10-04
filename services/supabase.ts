@@ -13,10 +13,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Juste après un rafraîchissement de session (typiquement à l'ouverture de
+// l'app), le serveur de données de Supabase peut juger le nouveau jeton
+// « émis dans le futur » (PGRST303) : ses horloges et celles du serveur
+// d'authentification diffèrent d'une seconde. La requête redevient valide un
+// instant plus tard, donc on la rejoue une fois au lieu d'échouer — sinon la
+// carte s'ouvrait sans aucun arrêt.
+const CLOCK_SKEW_RETRY_MS = 1500;
+
+const fetchWithClockSkewRetry: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (response.status !== 401) return response;
+  const body = await response.clone().text();
+  if (!body.includes('PGRST303')) return response;
+  await new Promise((resolve) => setTimeout(resolve, CLOCK_SKEW_RETRY_MS));
+  return fetch(input, init);
+};
+
 // Vraie authentification Supabase (téléphone + OTP) : la session (et son
 // rafraîchissement automatique) est gérée par supabase-js lui-même, stockée
 // via AsyncStorage — plus besoin de la persister à la main.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: fetchWithClockSkewRetry },
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

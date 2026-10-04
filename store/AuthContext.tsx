@@ -33,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profile = await getProfile(activeSession.user.id, activeSession.user.phone ?? '');
       setUser(profile ?? null);
+    } catch {
+      // Réseau coupé ou Supabase injoignable : on garde le profil déjà
+      // chargé plutôt que de déconnecter l'utilisateur pour une erreur
+      // passagère.
     } finally {
       setCheckingProfile(false);
     }
