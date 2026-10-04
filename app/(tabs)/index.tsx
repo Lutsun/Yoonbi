@@ -16,7 +16,17 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import TripSteps from '../../components/trip/TripSteps';
 import NavigationBanner from '../../components/trip/NavigationBanner';
-import { computeNavigation, formatMeters, NavigationState } from '../../services/navigation';
+import {
+  computeNavigation,
+  formatMeters,
+  NavigationState,
+  pathLengthM,
+  rerouteDecision,
+  walkMinutesFor,
+} from '../../services/navigation';
+import { planJourney } from '../../services/journey';
+import { slicePath } from '../../services/geometry';
+import { walkingRoute } from '../../services/roadPath';
 import {
   dismissGuidanceNotifications,
   notifyArrived,
@@ -36,17 +46,51 @@ import {
   TAB_BAR_BOTTOM_MARGIN,
 } from '../../constants/theme';
 import { getNearbyStops } from '../../services/transit';
-import { LatLng, Stop } from '../../types/transit';
+import { LatLng, Stop, TripSegment } from '../../types/transit';
 import { initialsOf } from '../../utils/text';
 import { distanceKm } from '../../utils/eta';
 
 // Niveau de zoom pendant le guidage : assez serré pour voir la rue suivante.
 const NAVIGATION_ZOOM = 16.5;
 const BROWSING_ZOOM = 15;
+// Apple Plans (iOS) ignore `zoom` et ne connaît que l'altitude de la caméra,
+// en mètres : sans elle, le guidage restait sur la vue d'ensemble du trajet
+// au lieu de zoomer sur l'utilisateur. Équivalents approximatifs des zooms
+// ci-dessus ; chaque plateforme ignore la valeur qui ne la concerne pas.
+const NAVIGATION_ALTITUDE = 700;
+const BROWSING_ALTITUDE = 2500;
 const KEEP_AWAKE_TAG = 'yoonbi-guidance';
 // Distance à laquelle prévenir avant de descendre — le même rayon que la
-// marche de correspondance (voir services/routing.ts).
+// marche de correspondance (voir services/routing.ts). Dès qu'il ne reste
+// plus qu'un arrêt, on prévient un peu plus tôt, dans la limite du second.
 const PREPARE_ALIGHT_RADIUS_M = 400;
+const PREPARE_ALIGHT_LAST_STOP_M = 800;
+// Délai minimal entre deux recalculs (quand recalculer : voir
+// `rerouteDecision` dans services/navigation.ts).
+const REROUTE_COOLDOWN_MS = 30000;
+
+// Chemin déjà parcouru : grisé, comme sur un GPS, pour que le reste ressorte.
+const TRAVELED_LIGHT = '#B9C0CA';
+const TRAVELED_DARK = '#4B5462';
+// Marche à venir : en points bleus, distincte des lignes de bus. Des traits
+// courts aux bouts arrondis se rejoignaient en un boudin informe ; un tiret
+// quasi nul arrondi dessine un point rond, espacé régulièrement.
+const WALK_LIGHT = '#2E7CF6';
+const WALK_DARK = '#5B9BFF';
+const WALK_DOTS = [1, 11];
+
+// Tracé minimal (deux fois le même point) d'une couche momentanément vide.
+function hiddenPath(segment: TripSegment): LatLng[] {
+  const start = segment.path[0];
+  return [start, start];
+}
+
+type RouteLayer = {
+  segment: TripSegment;
+  current: boolean;
+  traveled: LatLng[] | null;
+  ahead: LatLng[] | null;
+};
 
 const DAKAR_REGION: Region = {
   latitude: 14.6928,
@@ -85,7 +129,16 @@ export default function HomeScreen() {
   const { colors: c, isDark } = useTheme();
   const styles = useMemo(() => createStyles(c, isDark), [c, isDark]);
   const { user } = useAuth();
-  const { activeTrip, clearActiveTrip: clearActiveTripRaw, resumableTrip, resumeLastTrip, dismissResumableTrip } = useTrip();
+  const {
+    activeTrip,
+    activeTripId,
+    setActiveTrip,
+    updateActivePlan,
+    clearActiveTrip: clearActiveTripRaw,
+    resumableTrip,
+    resumeLastTrip,
+    dismissResumableTrip,
+  } = useTrip();
   const { status, position, precise, request } = useUserLocation();
   const mapRef = useRef<MapView>(null);
 
@@ -97,8 +150,14 @@ export default function HomeScreen() {
 
   // État du guidage, recalculé à chaque position (voir services/navigation.ts).
   const [nav, setNav] = useState<NavigationState | null>(null);
-  // L'avancement doit être monotone : on garde la dernière étape atteinte.
+  // L'avancement doit être monotone : on garde la dernière étape atteinte,
+  // et le chemin déjà parcouru sur son tracé (valable pour CE tracé-là : s'il
+  // est remplacé — rues suivies, chemin recalculé — on repart de sa projection).
   const stepIndexRef = useRef(0);
+  const progressRef = useRef<{ path: LatLng[] | null; along: number }>({ path: null, along: 0 });
+  // Un recalcul en cours de route remplace le trajet sans recadrer la carte :
+  // la caméra continue de suivre l'utilisateur.
+  const keepCameraRef = useRef(false);
   // Notifications de guidage déjà envoyées pour le trajet en cours — pour ne
   // prévenir qu'une fois par étape, pas à chaque position reçue.
   const notifiedTripKeyRef = useRef<string | null>(null);
@@ -183,17 +242,28 @@ export default function HomeScreen() {
     };
   }, [activeTrip]);
 
-  // Départ d'un trajet : on montre l'itinéraire en entier une fois, puis la
-  // caméra se met à suivre l'utilisateur.
+  // Départ d'un NOUVEAU trajet : on montre l'itinéraire en entier une fois,
+  // puis la caméra se met à suivre l'utilisateur. Volontairement lié à
+  // `activeTripId` et pas au trajet lui-même : quand son tracé est précisé en
+  // cours de route, le guidage ne doit ni repartir de zéro ni recadrer.
+  const activeTripRef = useRef(activeTrip);
+  activeTripRef.current = activeTrip;
   useEffect(() => {
     stepIndexRef.current = 0;
+    progressRef.current = { path: null, along: 0 };
     setStepsExpanded(false);
-    if (!activeTrip) {
+    const trip = activeTripRef.current;
+    if (!trip) {
       setNav(null);
       setFollowing(false);
       return;
     }
-    const coords = activeTrip.plan.segments.flatMap((s) => s.path);
+    if (keepCameraRef.current) {
+      keepCameraRef.current = false;
+      setFollowing(true);
+      return;
+    }
+    const coords = trip.plan.segments.flatMap((s) => s.path);
     if (coords.length > 0) {
       mapRef.current?.fitToCoordinates(coords, {
         edgePadding: { top: 160, right: 56, bottom: 360, left: 56 },
@@ -202,44 +272,164 @@ export default function HomeScreen() {
     }
     const timer = setTimeout(() => setFollowing(true), 1600);
     return () => clearTimeout(timer);
-  }, [activeTrip]);
+  }, [activeTripId]);
 
   // Le cœur du guidage : à chaque position, on recalcule l'étape en cours,
   // la distance jusqu'à la prochaine action et le temps restant, en tenant
   // compte de la précision réelle du GPS.
   useEffect(() => {
     if (!activeTrip || !position) return;
+    const segments = activeTrip.plan.segments;
+    const previous = progressRef.current;
+    const previousAlong =
+      previous.path !== null && previous.path === segments[stepIndexRef.current]?.path ? previous.along : 0;
     const next = computeNavigation(
       activeTrip.plan,
       position,
-      activeTrip.destination.name,
+      activeTrip.destination,
       stepIndexRef.current,
-      position.accuracy
+      position.accuracy,
+      previousAlong
     );
     stepIndexRef.current = next.stepIndex;
+    progressRef.current = { path: segments[next.stepIndex]?.path ?? null, along: next.alongM };
     setNav(next);
   }, [position, activeTrip]);
 
   // Rappels de guidage : un seul par étape, jamais un doublon à chaque
-  // position reçue. On repart de zéro dès que la destination change — pas à
-  // chaque replan (le tracé est remplacé une fois par le tracé qui suit les
-  // rues, juste après le départ, avant toute progression réelle).
+  // position reçue. On repart de zéro à chaque nouveau trajet — pas quand
+  // son tracé est simplement précisé.
   useEffect(() => {
     if (!activeTrip) return;
-    const key = `${activeTrip.origin.id}:${activeTrip.destination.id}`;
+    const key = String(activeTripId);
     if (notifiedTripKeyRef.current !== key) {
       notifiedTripKeyRef.current = key;
       preparedAlightRef.current = new Set();
       arrivedNotifiedRef.current = false;
     }
-  }, [activeTrip]);
+  }, [activeTrip, activeTripId]);
+
+  // --- Recalcul d'itinéraire -------------------------------------------------
+  // Comme un GPS, jusqu'à l'arrivée :
+  // - à pied, un écart durable recalcule le chemin jusqu'à l'arrêt visé — ou
+  //   le trajet entier s'il est devenu trop loin pour y revenir à pied ;
+  // - en bus, un détour ne déclenche rien (le guidage reprend dès que le bus
+  //   retrouve son trajet) ; seul un bus qui s'éloigne durablement de l'arrêt
+  //   de descente fait recalculer le trajet depuis la position actuelle ;
+  // - à tout moment, l'utilisateur peut recalculer d'un geste.
+  const offRouteSinceRef = useRef<number | null>(null);
+  // Distance à l'arrêt de descente au début de l'écart, pour savoir si le bus
+  // s'en rapproche malgré le détour ou s'il part ailleurs.
+  const offRouteStartDistRef = useRef(0);
+  const offRouteStepRef = useRef(-1);
+  const lastRerouteRef = useRef(0);
+  const [rerouting, setRerouting] = useState(false);
+  const [rerouteNotice, setRerouteNotice] = useState<string | null>(null);
+
+  // Le téléphone n'envoie une position qu'après quelques mètres parcourus :
+  // quelqu'un qui s'arrête hors du chemin n'en recevrait plus, et le délai
+  // avant recalcul ne serait jamais réévalué. Tant qu'on est hors itinéraire,
+  // on revérifie donc à intervalle régulier.
+  const [offRouteTick, setOffRouteTick] = useState(0);
+  const isOffRoute = !!nav?.offRoute && !nav.arrived;
+  useEffect(() => {
+    if (!isOffRoute) return;
+    const timer = setInterval(() => setOffRouteTick((t) => t + 1), 2000);
+    return () => clearInterval(timer);
+  }, [isOffRoute]);
+
+  const replanFromHere = useCallback(async (reason?: string) => {
+    const trip = activeTripRef.current;
+    if (!trip || !position || rerouting) return;
+    lastRerouteRef.current = Date.now();
+    setRerouting(true);
+    try {
+      const result = await planJourney({ position }, trip.destination);
+      if (activeTripRef.current !== trip) return; // guidage arrêté entre-temps
+      if (result.status === 'ok') {
+        keepCameraRef.current = true;
+        setActiveTrip({ origin: result.origin, destination: trip.destination, plan: result.options[0].plan });
+        setRerouteNotice(reason ? `${reason} — nouvel itinéraire` : 'Nouvel itinéraire depuis ta position');
+      } else if (result.status === 'no-service') {
+        setRerouteNotice('Plus de bus sur ce trajet à cette heure');
+      } else {
+        setRerouteNotice('Aucun autre trajet trouvé depuis ici');
+      }
+    } catch {
+      setRerouteNotice('Recalcul impossible pour le moment');
+    } finally {
+      setRerouting(false);
+    }
+  }, [position, rerouting, setActiveTrip]);
+
+  useEffect(() => {
+    const trip = activeTripRef.current;
+    if (!trip || !nav || !position || nav.arrived) return;
+    if (!nav.offRoute) {
+      offRouteSinceRef.current = null;
+      return;
+    }
+    const now = Date.now();
+    // Un écart se mesure étape par étape : la distance de référence n'a de
+    // sens que vers le point visé par l'étape en cours.
+    if (offRouteSinceRef.current === null || offRouteStepRef.current !== nav.stepIndex) {
+      offRouteSinceRef.current = now;
+      offRouteStepRef.current = nav.stepIndex;
+      offRouteStartDistRef.current = nav.distanceToNextM;
+    }
+    const segment = trip.plan.segments[nav.stepIndex];
+    if (!segment || rerouting || now - lastRerouteRef.current < REROUTE_COOLDOWN_MS) return;
+
+    const decision = rerouteDecision(
+      nav,
+      segment.type,
+      now - offRouteSinceRef.current,
+      nav.distanceToNextM - offRouteStartDistRef.current
+    );
+    if (decision.action === 'replan') {
+      replanFromHere(decision.reason);
+      return;
+    }
+    if (decision.action !== 'walk' || segment.type !== 'walk') return;
+
+    const target = segment.path[segment.path.length - 1];
+    lastRerouteRef.current = now;
+    setRerouting(true);
+    const stepIndex = nav.stepIndex;
+    walkingRoute(position, target)
+      .then((routed) => {
+        const current = activeTripRef.current;
+        if (!routed || !current || current !== trip) return;
+        const segments = current.plan.segments.map((s, i) =>
+          i === stepIndex && s.type === 'walk'
+            ? { ...s, path: routed.path, maneuvers: routed.maneuvers, minutes: walkMinutesFor(pathLengthM(routed.path)) }
+            : s
+        );
+        updateActivePlan({ ...current.plan, segments });
+        offRouteSinceRef.current = null;
+        setRerouteNotice('Chemin recalculé');
+      })
+      .finally(() => setRerouting(false));
+  }, [nav, position, rerouting, updateActivePlan, replanFromHere, offRouteTick]);
+
+  // Le message de recalcul s'efface tout seul.
+  useEffect(() => {
+    if (!rerouteNotice) return;
+    const timer = setTimeout(() => setRerouteNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [rerouteNotice]);
 
   useEffect(() => {
     if (!activeTrip || !nav) return;
     const segment = activeTrip.plan.segments[nav.stepIndex];
+    const nearAlight =
+      nav.distanceToNextM <= PREPARE_ALIGHT_RADIUS_M ||
+      (nav.stopsRemaining === 1 && nav.distanceToNextM <= PREPARE_ALIGHT_LAST_STOP_M);
     if (
       segment?.type === 'ride' &&
-      nav.distanceToNextM <= PREPARE_ALIGHT_RADIUS_M &&
+      // Pas tant qu'on attend encore le bus à l'arrêt de montée.
+      nav.instruction.kind === 'ride' &&
+      nearAlight &&
       !preparedAlightRef.current.has(nav.stepIndex)
     ) {
       preparedAlightRef.current.add(nav.stepIndex);
@@ -259,6 +449,7 @@ export default function HomeScreen() {
       {
         center: { latitude: position.latitude, longitude: position.longitude },
         zoom: NAVIGATION_ZOOM,
+        altitude: NAVIGATION_ALTITUDE,
         // La carte s'oriente dans le sens de la marche, comme un GPS.
         ...(position.heading != null ? { heading: position.heading } : {}),
         pitch: 45,
@@ -277,10 +468,31 @@ export default function HomeScreen() {
       {
         center: { latitude: position.latitude, longitude: position.longitude },
         zoom: activeTrip ? NAVIGATION_ZOOM : BROWSING_ZOOM,
+        altitude: activeTrip ? NAVIGATION_ALTITUDE : BROWSING_ALTITUDE,
       },
       { duration: 500 }
     );
   };
+
+  // Découpe du tracé à la position de l'utilisateur : ce qui est fait d'un
+  // côté, ce qui reste de l'autre.
+  const navStep = nav?.stepIndex ?? -1;
+  const navAlong = nav?.alongM ?? 0;
+  const routeLayers = useMemo(() => {
+    if (!activeTrip) return [];
+    return activeTrip.plan.segments.map((segment, index): RouteLayer => {
+      if (index < navStep) return { segment, current: false, traveled: segment.path, ahead: null };
+      if (index > navStep) return { segment, current: false, traveled: null, ahead: segment.path };
+      const length = pathLengthM(segment.path);
+      const along = Math.min(navAlong, length);
+      return {
+        segment,
+        current: true,
+        traveled: along >= 1 ? slicePath(segment.path, 0, along) : null,
+        ahead: along < length ? slicePath(segment.path, along, length) : null,
+      };
+    });
+  }, [activeTrip, navStep, navAlong]);
 
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const arrived = nav?.arrived ?? false;
@@ -323,31 +535,52 @@ export default function HomeScreen() {
 
         {activeTrip && (
           <>
-            {activeTrip.plan.segments.map((segment, index) => {
-              const done = nav != null && index < nav.stepIndex;
-              const current = nav != null && index === nav.stepIndex;
-              const color = segment.type === 'ride' ? segment.lineColor : c.inkFaint;
-              return (
-                <React.Fragment key={index}>
-                  {/* Liseré blanc : l'étape en cours ressort sur la carte. */}
-                  {current && (
-                    <Polyline
-                      coordinates={segment.path}
-                      strokeColor="#FFFFFF"
-                      strokeWidth={13}
-                      lineCap="round"
-                    />
-                  )}
-                  <Polyline
-                    coordinates={segment.path}
-                    strokeColor={done ? `${color}55` : color}
-                    strokeWidth={current ? 9 : segment.type === 'ride' ? 6 : 4}
-                    lineDashPattern={segment.type === 'walk' ? [6, 6] : undefined}
-                    lineCap="round"
-                  />
-                </React.Fragment>
-              );
-            })}
+            {/* Trois couches par étape, toujours montées et dans le même ordre :
+                Apple Plans empile les tracés dans l'ordre où ils sont AJOUTÉS
+                (pas l'ordre React). Un liseré ajouté en cours de route
+                recouvrait la ligne colorée ; on met donc à jour les couches
+                sans jamais en ajouter. Une couche vide est rendue invisible ;
+                un nouveau trajet (recalcul) remonte toutes les couches d'un coup. */}
+            {routeLayers.map(({ segment, traveled }, index) => (
+              <Polyline
+                key={`${activeTripId}-done-${index}`}
+                coordinates={traveled ?? hiddenPath(segment)}
+                strokeColor={traveled ? (isDark ? TRAVELED_DARK : TRAVELED_LIGHT) : 'transparent'}
+                strokeWidth={6}
+                lineDashPattern={segment.type === 'walk' ? WALK_DOTS : undefined}
+                lineCap="round"
+                zIndex={1}
+              />
+            ))}
+            {routeLayers.map(({ segment, ahead, current }, index) => (
+              <Polyline
+                key={`${activeTripId}-casing-${index}`}
+                coordinates={ahead ?? hiddenPath(segment)}
+                strokeColor={ahead && current && segment.type === 'ride' ? '#FFFFFF' : 'transparent'}
+                strokeWidth={13}
+                lineCap="round"
+                zIndex={2}
+              />
+            ))}
+            {routeLayers.map(({ segment, ahead, current }, index) => (
+              <Polyline
+                key={`${activeTripId}-ahead-${index}`}
+                coordinates={ahead ?? hiddenPath(segment)}
+                strokeColor={
+                  !ahead
+                    ? 'transparent'
+                    : segment.type === 'ride'
+                      ? segment.lineColor
+                      : isDark
+                        ? WALK_DARK
+                        : WALK_LIGHT
+                }
+                strokeWidth={segment.type === 'walk' ? (current ? 8 : 6) : current ? 9 : 6}
+                lineDashPattern={segment.type === 'walk' ? WALK_DOTS : undefined}
+                lineCap="round"
+                zIndex={3}
+              />
+            ))}
 
             {/* Prochaine action, épinglée sur la carte : où monter, où descendre. */}
             {nav && !nav.arrived && activeTrip.plan.segments[nav.stepIndex] && (
@@ -401,7 +634,12 @@ export default function HomeScreen() {
           <View style={styles.navHeader}>
             <View style={{ flex: 1 }}>
               {nav ? (
-                <NavigationBanner nav={nav} />
+                <NavigationBanner
+                  nav={nav}
+                  notice={rerouteNotice}
+                  rerouting={rerouting}
+                  onReplan={replanFromHere}
+                />
               ) : (
                 <View style={styles.waitingBanner}>
                   <ActivityIndicator color={c.yonn} size="small" />

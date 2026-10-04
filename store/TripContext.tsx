@@ -31,7 +31,16 @@ export type PreviewTrip = {
 
 type TripContextValue = {
   activeTrip: ActiveTrip | null;
+  /**
+   * Change à chaque NOUVEAU trajet, jamais quand le tracé du trajet en cours
+   * est simplement précisé (rues suivies, marche recalculée) : le guidage
+   * repart de la première étape et la carte se recadre seulement dans le
+   * premier cas.
+   */
+  activeTripId: number;
   setActiveTrip: (trip: ActiveTrip) => void;
+  /** Remplace le plan du trajet en cours sans en faire un nouveau trajet. */
+  updateActivePlan: (plan: TripPlan) => void;
   clearActiveTrip: () => void;
   /**
    * Trajet retrouvé au lancement de l'app (moins de 6 h, non terminé) —
@@ -50,6 +59,7 @@ const TripContext = createContext<TripContextValue | undefined>(undefined);
 
 export function TripProvider({ children }: { children: React.ReactNode }) {
   const [activeTrip, setActiveTripState] = useState<ActiveTrip | null>(null);
+  const [activeTripId, setActiveTripId] = useState(0);
   const [pendingTrip, setPendingTripState] = useState<PendingTrip | null>(null);
   const [previewTrip, setPreviewTripState] = useState<PreviewTrip | null>(null);
   const [resumableTrip, setResumableTrip] = useState<LastTripCache | null>(null);
@@ -64,13 +74,16 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<TripContextValue>(
     () => ({
       activeTrip,
+      activeTripId,
       setActiveTrip: (trip) => {
         // Le guidage démarre tout de suite sur le tracé droit ; il est
-        // remplacé par le tracé suivant les rues dès qu'il est calculé, et
-        // c'est ce tracé-là qu'on garde en cache (utilisable hors ligne).
+        // remplacé par le vrai tracé (ligne réelle, rues, consignes à pied)
+        // dès qu'il est calculé, et c'est celui-là qu'on garde en cache
+        // (utilisable hors ligne).
         const version = ++tripVersion.current;
         setResumableTrip(null);
         setActiveTripState(trip);
+        setActiveTripId(version);
         saveLastTrip(trip);
         snapPlanToRoads(trip.plan).then((plan) => {
           if (version === tripVersion.current) {
@@ -80,9 +93,16 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
           }
         });
       },
+      updateActivePlan: (plan) => {
+        if (!activeTrip) return;
+        const next = { ...activeTrip, plan };
+        setActiveTripState(next);
+        saveLastTrip(next);
+      },
       clearActiveTrip: () => {
         tripVersion.current += 1;
         setActiveTripState(null);
+        setActiveTripId(tripVersion.current);
         clearLastTrip();
       },
       resumableTrip,
@@ -94,6 +114,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
           destination: resumableTrip.destination,
           plan: resumableTrip.plan,
         });
+        setActiveTripId(tripVersion.current);
         setResumableTrip(null);
       },
       dismissResumableTrip: () => {
@@ -105,7 +126,7 @@ export function TripProvider({ children }: { children: React.ReactNode }) {
       previewTrip,
       setPreviewTrip: (trip) => setPreviewTripState(trip),
     }),
-    [activeTrip, pendingTrip, previewTrip, resumableTrip]
+    [activeTrip, activeTripId, pendingTrip, previewTrip, resumableTrip]
   );
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
