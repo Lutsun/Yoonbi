@@ -46,6 +46,7 @@ import {
   TAB_BAR_BOTTOM_MARGIN,
 } from '../../constants/theme';
 import { getNearbyStops } from '../../services/transit';
+import { clearLastTrip } from '../../services/offlineCache';
 import { LatLng, Stop, TripSegment } from '../../types/transit';
 import { initialsOf } from '../../utils/text';
 import { distanceKm } from '../../utils/eta';
@@ -438,6 +439,9 @@ export default function HomeScreen() {
     if (nav.arrived && !arrivedNotifiedRef.current) {
       arrivedNotifiedRef.current = true;
       notifyArrived(activeTrip.destination.name);
+      // Arrivé : ce trajet ne doit plus être proposé à la reprise, même si
+      // l'app est fermée sans appuyer sur « Terminer ».
+      clearLastTrip();
     }
   }, [nav, activeTrip]);
 
