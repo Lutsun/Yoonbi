@@ -41,6 +41,11 @@ const BOARD_WAIT_MINUTES = 6;
 // préfère un trajet direct à un trajet à peine plus court avec changement.
 // Cette pénalité influence le choix du trajet, jamais la durée affichée.
 const BOARDING_PENALTY_MINUTES = 5;
+// Une minute à pied (soleil, bagages, trottoirs encombrés) pèse plus qu'une
+// minute assis dans le bus : à durée égale, on préfère le trajet qui fait
+// moins marcher. Comme la pénalité de montée, ce poids n'influence que le
+// choix du trajet, jamais la durée affichée.
+const WALK_COST_FACTOR = 1.5;
 // Distance à vol d'oiseau → distance par la route : négligeable entre deux
 // arrêts proches, nettement plus marquée entre deux arrêts éloignés.
 const SHORT_HOP_KM = 0.6;
@@ -248,7 +253,7 @@ function findShortestPath(
     }
 
     for (const edge of graph.walkEdges.get(stopId) ?? []) {
-      const newDist = currentDist + edge.minutes;
+      const newDist = currentDist + edge.minutes * WALK_COST_FACTOR;
       const newKey = stateKey(edge.toStopId, null);
       if (newDist < (dist.get(newKey) ?? Infinity)) {
         dist.set(newKey, newDist);
@@ -472,13 +477,24 @@ export function withEgressWalk(plan: TripPlan, alightStop: Stop, place: LatLng &
   });
 }
 
+// Coût d'un trajet complet pour départager des candidats (départs ou arrivées
+// différents) : mêmes poids que dans la recherche du plus court chemin.
+function planCost(plan: TripPlan): number {
+  const rides = plan.segments.filter((s) => s.type === 'ride').length;
+  return (
+    plan.totalMinutes +
+    (WALK_COST_FACTOR - 1) * plan.totalWalkMinutes +
+    BOARDING_PENALTY_MINUTES * Math.max(0, rides - 1)
+  );
+}
+
 /**
  * Garde les deux meilleurs trajets parmi plusieurs candidats, en ne retenant
  * qu'un trajet par combinaison de lignes (deux trajets qui prennent les mêmes
  * lignes ne sont pas un vrai choix).
  */
 export function pickBestOptions(plans: TripPlan[]): TripOption[] {
-  const sorted = [...plans].sort((a, b) => a.totalMinutes - b.totalMinutes);
+  const sorted = [...plans].sort((a, b) => planCost(a) - planCost(b));
   const seen = new Set<string>();
   const unique: TripPlan[] = [];
   for (const plan of sorted) {
@@ -529,7 +545,7 @@ export function planFromPosition(
     }
   }
 
-  all.sort((a, b) => a.totalMinutes - b.totalMinutes);
+  all.sort((a, b) => planCost(a) - planCost(b));
 
   // Deux trajets qui prennent exactement les mêmes lignes ne sont pas un vrai
   // choix : on ne garde que le plus rapide de chaque combinaison.
