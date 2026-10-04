@@ -14,10 +14,11 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 - **Écran d'accueil avec carte en direct** — la position de l'utilisateur, les arrêts de bus autour de lui et les lignes qui les desservent
 - **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`). Une ligne dont l'horaire est confirmé n'est jamais proposée hors de ses heures de service (pas de B3 un dimanche), et l'app dit quand elle reprend (« Le B1 ne circule plus à cette heure — reprise demain à 6h ») ; une ligne à l'horaire estimé reste proposée avec une mise en garde, et une option sûre (autre ligne, ou à pied) passe devant si elle ne coûte pas plus de 10 minutes (voir `services/serviceHours.ts` et `services/journey.ts`)
 - **Guidage pas à pas, comme un GPS** (voir `services/navigation.ts`) :
-  - à pied, consignes tournant par tournant sur les vraies rues (« Tourne à gauche sur Route de Niayes · dans 40 m ») ;
-  - à l'arrêt, la ligne et sa direction (« Prends la B1 · direction Petersen ») ;
+  - à pied, consignes tournant par tournant sur les vraies rues (« Tournez à gauche sur Route de Niayes · dans 40 m ») ;
+  - à l'arrêt, la ligne et sa direction (« Prenez la B1 · direction Petersen ») ;
   - dans le bus, le décompte des arrêts (« Encore 9 arrêts · prochain : Scat Urbam ») et un rappel avant de descendre ;
   - sur la carte, le chemin déjà parcouru est grisé, le reste reste en couleur ;
+  - à l'arrivée, « Vous êtes arrivé à destination » ; toute l'app vouvoie l'usager ;
   - recalcul automatique : chemin à pied refait en cas d'écart, trajet entier refait si le bus part ailleurs ou si l'arrêt de descente est manqué ; un simple détour du bus ne déclenche rien, le guidage reprend dès qu'il retrouve son trajet
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
 - **Horaires et fréquence par ligne** — amplitude horaire et fréquence de passage sur la fiche de chaque ligne, avec la mention « estimation » quand l'exploitant ne publie pas d'horaire précis (voir `supabase/schema.sql`)

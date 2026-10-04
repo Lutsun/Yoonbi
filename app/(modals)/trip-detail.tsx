@@ -38,7 +38,7 @@ export default function TripDetailScreen() {
         <EmptyState
           icon="alert-circle-outline"
           title="Aucun itinéraire à afficher"
-          description="Reviens en arrière et relance une recherche."
+          description="Revenez en arrière et relancez une recherche."
         />
       </SafeAreaView>
     );

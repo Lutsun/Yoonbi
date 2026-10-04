@@ -41,14 +41,14 @@ type OsrmStep = {
 };
 
 const TURNS: Record<string, { kind: ManeuverKind; verb: string }> = {
-  left: { kind: 'left', verb: 'Tourne à gauche' },
-  right: { kind: 'right', verb: 'Tourne à droite' },
-  'slight left': { kind: 'slight-left', verb: 'Prends légèrement à gauche' },
-  'slight right': { kind: 'slight-right', verb: 'Prends légèrement à droite' },
-  'sharp left': { kind: 'sharp-left', verb: 'Tourne franchement à gauche' },
-  'sharp right': { kind: 'sharp-right', verb: 'Tourne franchement à droite' },
-  uturn: { kind: 'uturn', verb: 'Fais demi-tour' },
-  straight: { kind: 'straight', verb: 'Continue tout droit' },
+  left: { kind: 'left', verb: 'Tournez à gauche' },
+  right: { kind: 'right', verb: 'Tournez à droite' },
+  'slight left': { kind: 'slight-left', verb: 'Prenez légèrement à gauche' },
+  'slight right': { kind: 'slight-right', verb: 'Prenez légèrement à droite' },
+  'sharp left': { kind: 'sharp-left', verb: 'Tournez franchement à gauche' },
+  'sharp right': { kind: 'sharp-right', verb: 'Tournez franchement à droite' },
+  uturn: { kind: 'uturn', verb: 'Faites demi-tour' },
+  straight: { kind: 'straight', verb: 'Continuez tout droit' },
 };
 
 function ordinal(n: number): string {
@@ -64,25 +64,25 @@ function maneuverFromStep(step: OsrmStep): Maneuver | null {
   const onStreet = street ? ` sur ${street}` : '';
 
   if (type === 'depart') {
-    return { ...at, kind: 'depart', text: street ? `Pars sur ${street}` : 'Commence à marcher' };
+    return { ...at, kind: 'depart', text: street ? `Partez sur ${street}` : 'Commencez à marcher' };
   }
   if (type === 'arrive') {
-    return { ...at, kind: 'arrive', text: 'Tu es arrivé' };
+    return { ...at, kind: 'arrive', text: 'Vous êtes arrivé' };
   }
   if (type.includes('roundabout') || type.includes('rotary')) {
     return {
       ...at,
       kind: 'roundabout',
-      text: exit ? `Au rond-point, prends la ${ordinal(exit)} sortie${onStreet}` : `Traverse le rond-point${onStreet}`,
+      text: exit ? `Au rond-point, prenez la ${ordinal(exit)} sortie${onStreet}` : `Traversez le rond-point${onStreet}`,
     };
   }
   if (type === 'notification') return null;
 
   const turn = TURNS[modifier ?? 'straight'] ?? TURNS.straight;
   if (turn.kind === 'straight') {
-    // « Continue tout droit » n'apporte rien sans nouveau nom de rue.
+    // « Continuez tout droit » n'apporte rien sans nouveau nom de rue.
     if (!street || type === 'continue') return null;
-    return { ...at, kind: 'straight', text: `Continue sur ${street}` };
+    return { ...at, kind: 'straight', text: `Continuez sur ${street}` };
   }
   return { ...at, kind: turn.kind, text: `${turn.verb}${onStreet}` };
 }

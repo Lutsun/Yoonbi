@@ -132,11 +132,11 @@ function rideInstruction(
       instruction: {
         ...base,
         kind: 'ride',
-        title: `Descendre à ${segment.alightStopName}`,
+        title: `Descendez à ${segment.alightStopName}`,
         detail:
           distanceToNextM > 900
-            ? `Reste dans le bus · ${formatMeters(distanceToNextM)}`
-            : `Prépare-toi · ${formatMeters(distanceToNextM)}`,
+            ? `Restez dans le bus · ${formatMeters(distanceToNextM)}`
+            : `Préparez-vous · ${formatMeters(distanceToNextM)}`,
       },
     };
   }
@@ -147,10 +147,10 @@ function rideInstruction(
       instruction: {
         ...base,
         kind: 'board',
-        title: `Prends la ${segment.lineCode}`,
+        title: `Prenez la ${segment.lineCode}`,
         detail: segment.headsign
-          ? `Direction ${segment.headsign} · descends à ${segment.alightStopName}`
-          : `Descends à ${segment.alightStopName}`,
+          ? `Direction ${segment.headsign} · descendez à ${segment.alightStopName}`
+          : `Descendez à ${segment.alightStopName}`,
       },
       nextStopName: stops[1].name,
       stopsRemaining: stops.length - 1,
@@ -167,7 +167,7 @@ function rideInstruction(
       instruction: {
         ...base,
         kind: 'ride',
-        title: 'Descends au prochain arrêt',
+        title: 'Descendez au prochain arrêt',
         detail: `${segment.alightStopName} · ${formatMeters(distanceToNextM)}`,
       },
       nextStopName: segment.alightStopName,
@@ -179,7 +179,7 @@ function rideInstruction(
     instruction: {
       ...base,
       kind: 'ride',
-      title: `Descends à ${segment.alightStopName}`,
+      title: `Descendez à ${segment.alightStopName}`,
       // Le décompte d'abord : un nom d'arrêt long ne doit pas le faire couper.
       detail: `Encore ${stopsRemaining} arrêts · prochain : ${stops[next].name}`,
     },
@@ -197,7 +197,7 @@ function walkInstruction(
   const fallback: Instruction = {
     instruction: {
       kind: 'walk',
-      title: `Marche jusqu’à ${targetName}`,
+      title: `Marchez jusqu’à ${targetName}`,
       detail: formatMeters(distanceToNextM),
     },
   };
@@ -251,7 +251,7 @@ function arrivedState(stepIndex: number, destinationName: string): NavigationSta
     remainingMinutes: 0,
     remainingMeters: 0,
     progress: 1,
-    instruction: { kind: 'arrival', title: 'Tu es arrivé', detail: destinationName },
+    instruction: { kind: 'arrival', title: 'Vous êtes arrivé', detail: destinationName },
   };
 }
 
@@ -439,7 +439,7 @@ export function rerouteDecision(
   if (segmentType === 'ride') {
     if (state.instruction.kind === 'board') {
       return offRouteForMs >= BOARD_REROUTE_AFTER_MS
-        ? { action: 'replan', reason: 'Tu as quitté l’arrêt' }
+        ? { action: 'replan', reason: 'Vous avez quitté l’arrêt' }
         : { action: 'none' };
     }
     return offRouteForMs >= RIDE_REROUTE_AFTER_MS && driftM >= RIDE_DRIFT_M
@@ -449,7 +449,7 @@ export function rerouteDecision(
 
   if (offRouteForMs < WALK_REROUTE_AFTER_MS) return { action: 'none' };
   return state.distanceToNextM > WALK_BACK_MAX_M
-    ? { action: 'replan', reason: 'Tu es loin de ton chemin' }
+    ? { action: 'replan', reason: 'Vous êtes loin de votre chemin' }
     : { action: 'walk' };
 }
 

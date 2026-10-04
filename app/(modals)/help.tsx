@@ -12,12 +12,12 @@ const QUESTIONS: { question: string; answer: string }[] = [
   {
     question: 'Comment trouver un trajet ?',
     answer:
-      'Sur la carte, appuie sur « Où allez-vous ? ». Ton point de départ est déjà rempli avec l’arrêt le plus proche de toi : il ne te reste qu’à indiquer ta destination.',
+      'Sur la carte, appuyez sur « Où allez-vous ? ». Votre point de départ est déjà rempli avec votre position : il ne vous reste qu’à indiquer votre destination.',
   },
   {
     question: 'Que veut dire « Recommandé » ?',
     answer:
-      'C’est le trajet le plus rapide parmi ceux que Yoonbi a trouvés. Tu peux toujours choisir l’autre option si elle t’arrange mieux.',
+      'C’est le trajet que Yoonbi juge le meilleur : le plus rapide, en évitant la marche inutile et les bus qui ne circulent peut-être plus à cette heure. Vous pouvez toujours choisir l’autre option si elle vous arrange mieux.',
   },
   {
     question: 'Les prix affichés sont-ils exacts ?',
@@ -27,17 +27,17 @@ const QUESTIONS: { question: string; answer: string }[] = [
   {
     question: 'Pourquoi mon point n’est pas au bon endroit ?',
     answer:
-      'Vérifie que la position précise est activée pour Yoonbi dans les Réglages de ton téléphone. En position approximative, iOS ne donne qu’une zone de plusieurs kilomètres.',
+      'Vérifiez que la position précise est activée pour Yoonbi dans les Réglages de votre téléphone. En position approximative, iOS ne donne qu’une zone de plusieurs kilomètres.',
   },
   {
     question: 'Comment retrouver un trajet plus tard ?',
     answer:
-      'Avant de partir, appuie sur l’icône marque-page à côté de « Démarrer le trajet ». Tu le retrouveras dans l’onglet Favoris, et un appui suffira pour le relancer.',
+      'Avant de partir, appuyez sur l’icône marque-page à côté de « Démarrer le trajet ». Vous le retrouverez dans l’onglet Favoris, et un appui suffira pour le relancer.',
   },
   {
     question: 'Je n’ai pas reçu mon code de connexion',
     answer:
-      'Attends la fin du compte à rebours puis appuie sur « Renvoyer ». Vérifie aussi que ton numéro est correct.',
+      'Attendez la fin du compte à rebours puis appuyez sur « Renvoyer ». Vérifiez aussi que votre numéro est correct.',
   },
 ];
 

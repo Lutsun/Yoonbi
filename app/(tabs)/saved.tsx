@@ -103,7 +103,7 @@ export default function SavedScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.head}>
         <Text style={styles.title}>Favoris</Text>
-        <Text style={styles.subtitle}>Tes trajets et tes lignes enregistrés</Text>
+        <Text style={styles.subtitle}>Vos trajets et vos lignes enregistrés</Text>
       </View>
 
       {loading ? (
@@ -113,14 +113,14 @@ export default function SavedScreen() {
       ) : errored ? (
         <EmptyState
           icon="cloud-offline-outline"
-          title="Impossible de charger tes favoris"
-          description="Vérifie ta connexion et réessaie dans un instant."
+          title="Impossible de charger vos favoris"
+          description="Vérifiez votre connexion et réessayez dans un instant."
         />
       ) : isEmpty ? (
         <EmptyState
           icon="bookmark-outline"
           title="Rien d'enregistré"
-          description="Enregistre un itinéraire avant de partir, ou mets une ligne en favori depuis l'onglet Lignes."
+          description="Enregistrez un itinéraire avant de partir, ou mettez une ligne en favori depuis l'onglet Lignes."
         />
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
@@ -148,7 +148,7 @@ export default function SavedScreen() {
                         <Text style={styles.rowTitle} numberOfLines={1}>
                           {trip.originLabel} → {trip.destinationLabel}
                         </Text>
-                        <Text style={styles.rowMeta}>Appuie pour relancer ce trajet</Text>
+                        <Text style={styles.rowMeta}>Appuyez pour relancer ce trajet</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={17} color={c.inkFaint} />
                     </TouchableOpacity>

@@ -32,9 +32,9 @@ type Outcome = 'none' | 'no-path' | 'same-stop' | 'no-service' | 'error' | 'no-l
 const OUTCOME_MESSAGE: Record<Exclude<Outcome, 'none'>, string> = {
   'no-path': 'Ces deux arrêts ne sont pas encore reliés dans le réseau Yoonbi.',
   'same-stop': 'Le départ et la destination sont le même arrêt.',
-  'no-service': 'Les lignes qui font ce trajet ne circulent pas à cette heure. Réessaie aux heures de service.',
-  error: 'Impossible de calculer l’itinéraire. Vérifie ta connexion.',
-  'no-location': 'Active la localisation pour partir de ta position exacte.',
+  'no-service': 'Les lignes qui font ce trajet ne circulent pas à cette heure. Réessayez aux heures de service.',
+  error: 'Impossible de calculer l’itinéraire. Vérifiez votre connexion.',
+  'no-location': 'Activez la localisation pour partir de votre position exacte.',
 };
 
 const PLACE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {

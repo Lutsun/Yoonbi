@@ -25,8 +25,8 @@ const MANEUVER_ICONS: Record<ManeuverKind, keyof typeof MaterialCommunityIcons.g
 // Hors itinéraire : ce qui se passe, selon l'étape. En bus, un détour est
 // souvent normal (travaux, embouteillage) — on rassure plutôt qu'alarmer.
 const OFF_ROUTE_TEXT: Record<NavigationStep['kind'], string> = {
-  walk: 'Tu t’éloignes du chemin — recalcul en cours…',
-  board: 'Tu t’éloignes de l’arrêt de montée.',
+  walk: 'Vous vous éloignez du chemin — recalcul en cours…',
+  board: 'Vous vous éloignez de l’arrêt de montée.',
   ride: 'Le bus s’écarte de son trajet habituel — le guidage reprend dès qu’il le retrouve.',
   arrival: '',
 };
@@ -97,7 +97,7 @@ export default function NavigationBanner({
         <View style={styles.info}>
           <Ionicons name="cellular-outline" size={15} color={c.inkMuted} />
           <Text style={styles.infoText}>
-            Signal GPS faible — le guidage reprendra dès que ta position sera plus précise.
+            Signal GPS faible — le guidage reprendra dès que votre position sera plus précise.
           </Text>
         </View>
       )}

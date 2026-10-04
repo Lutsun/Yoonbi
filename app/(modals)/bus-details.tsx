@@ -87,7 +87,7 @@ export default function BusDetailsScreen() {
         <EmptyState
           icon="cloud-offline-outline"
           title="Impossible de charger cette ligne"
-          description="Vérifie ta connexion et réessaie dans un instant."
+          description="Vérifiez votre connexion et réessayez dans un instant."
         />
       ) : stops.length === 0 ? (
         <EmptyState

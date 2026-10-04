@@ -171,7 +171,7 @@ export default function RoutesScreen() {
         <EmptyState
           icon="cloud-offline-outline"
           title="Impossible de charger les lignes"
-          description="Vérifie ta connexion et réessaie dans un instant."
+          description="Vérifiez votre connexion et réessayez dans un instant."
         />
       ) : filtered.length === 0 ? (
         <EmptyState

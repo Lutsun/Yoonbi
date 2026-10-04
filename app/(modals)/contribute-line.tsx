@@ -75,7 +75,7 @@ export default function ContributeLineScreen() {
       setError(
         err instanceof Error
           ? err.message
-          : "Échec de l'envoi — vérifie ta connexion et réessaie."
+          : "Échec de l'envoi — vérifiez votre connexion et réessayez."
       );
     } finally {
       setSubmitting(false);
@@ -92,8 +92,8 @@ export default function ContributeLineScreen() {
           </View>
           <Text style={styles.doneTitle}>Contribution envoyée</Text>
           <Text style={styles.doneText}>
-            Un administrateur va la relire avant qu'elle n'apparaisse dans l'app. Tu peux suivre
-            son statut depuis ton profil, dans « Mes contributions ».
+            Un administrateur va la relire avant qu'elle n'apparaisse dans l'app. Vous pouvez suivre
+            son statut depuis votre profil, dans « Mes contributions ».
           </Text>
           <View style={styles.doneButton}>
             <PrimaryButton label="Terminer" onPress={() => router.back()} />
@@ -107,7 +107,7 @@ export default function ContributeLineScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader
         title="Proposer une ligne"
-        subtitle="Marque chaque arrêt pendant que tu y es — Yoonbi capte ta position sur l'instant."
+        subtitle="Marquez chaque arrêt pendant que vous y êtes — Yoonbi capte votre position sur l'instant."
         action="close"
       />
 
@@ -159,7 +159,7 @@ export default function ContributeLineScreen() {
 
           {stops.length === 0 && (
             <Text style={styles.hint}>
-              Monte dans le bus, puis marque le premier arrêt dès le départ.
+              Montez dans le bus, puis marquez le premier arrêt dès le départ.
             </Text>
           )}
 
@@ -191,7 +191,7 @@ export default function ContributeLineScreen() {
             <TouchableOpacity style={styles.locationNotice} onPress={requestLocation}>
               <Ionicons name="location-outline" size={16} color={c.yonnDark} />
               <Text style={styles.locationNoticeText}>
-                Active ta position pour pouvoir marquer un arrêt.
+                Activez votre position pour pouvoir marquer un arrêt.
               </Text>
             </TouchableOpacity>
           ) : (

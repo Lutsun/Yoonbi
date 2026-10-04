@@ -46,11 +46,11 @@ async function notify(title: string, body: string): Promise<void> {
 }
 
 export function notifyPrepareToAlight(stopName: string): void {
-  notify('Prépare-toi à descendre', `Prochain arrêt : ${stopName}`);
+  notify('Préparez-vous à descendre', `Prochain arrêt : ${stopName}`);
 }
 
 export function notifyArrived(destinationName: string): void {
-  notify('Tu es arrivé', destinationName);
+  notify('Vous êtes arrivé à destination', destinationName);
 }
 
 export async function dismissGuidanceNotifications(): Promise<void> {

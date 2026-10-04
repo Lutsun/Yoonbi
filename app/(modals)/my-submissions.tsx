@@ -51,14 +51,14 @@ export default function MySubmissionsScreen() {
       ) : errored ? (
         <EmptyState
           icon="cloud-offline-outline"
-          title="Impossible de charger tes contributions"
-          description="Vérifie ta connexion et réessaie dans un instant."
+          title="Impossible de charger vos contributions"
+          description="Vérifiez votre connexion et réessayez dans un instant."
         />
       ) : items.length === 0 ? (
         <EmptyState
           icon="add-circle-outline"
           title="Aucune contribution pour l'instant"
-          description="Depuis ton profil, propose une ligne de bus absente de Yoonbi."
+          description="Depuis votre profil, proposez une ligne de bus absente de Yoonbi."
         />
       ) : (
         <FlatList

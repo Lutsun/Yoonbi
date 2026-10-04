@@ -49,11 +49,11 @@ export default function CompleteProfileScreen() {
 
   const handleSubmit = async () => {
     if (!fullName.trim()) {
-      setError('Entre ton nom complet');
+      setError('Entrez votre nom complet');
       return;
     }
     if (!session?.user) {
-      setError('Session expirée, reconnecte-toi.');
+      setError('Session expirée, reconnectez-vous.');
       return;
     }
     setError(undefined);

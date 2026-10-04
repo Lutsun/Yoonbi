@@ -52,7 +52,7 @@ export default function EditProfileScreen() {
           <Text style={styles.label}>Nom complet</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ton nom"
+            placeholder="Votre nom"
             placeholderTextColor={c.inkFaint}
             value={fullName}
             onChangeText={setFullName}
@@ -73,7 +73,7 @@ export default function EditProfileScreen() {
             <Text style={styles.readOnlyText}>+221 {formatPhoneDisplay(user.phone)}</Text>
           </View>
           <Text style={styles.hint}>
-            Le numéro sert à ta connexion : il ne peut pas être changé ici.
+            Le numéro sert à votre connexion : il ne peut pas être changé ici.
           </Text>
 
           {!!error && <Text style={styles.error}>{error}</Text>}

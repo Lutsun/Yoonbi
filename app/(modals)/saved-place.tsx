@@ -25,8 +25,8 @@ import { useUserLocation } from '../../store/LocationContext';
 import { Stop } from '../../types/transit';
 
 const KIND_LABEL: Record<'home' | 'work', { title: string; placeholder: string }> = {
-  home: { title: 'Domicile', placeholder: 'Cherche ton adresse…' },
-  work: { title: 'Travail', placeholder: "Cherche ton lieu de travail…" },
+  home: { title: 'Domicile', placeholder: 'Cherchez votre adresse…' },
+  work: { title: 'Travail', placeholder: "Cherchez votre lieu de travail…" },
 };
 
 export default function SavedPlaceScreen() {
@@ -143,7 +143,7 @@ export default function SavedPlaceScreen() {
       )}
 
       {query.trim() && !loading && results.length === 0 ? (
-        <EmptyState icon="search-outline" title="Aucun résultat" description="Essaie un autre nom ou une autre orthographe." />
+        <EmptyState icon="search-outline" title="Aucun résultat" description="Essayez un autre nom ou une autre orthographe." />
       ) : (
         <FlatList
           data={results}

@@ -27,7 +27,7 @@ export default function ChooseTripScreen() {
         <EmptyState
           icon="alert-circle-outline"
           title="Aucun trajet à afficher"
-          description="Reviens en arrière et relance une recherche."
+          description="Revenez en arrière et relancez une recherche."
         />
       </SafeAreaView>
     );

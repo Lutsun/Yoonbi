@@ -107,17 +107,17 @@ const LOCATION_BLOCKERS: Partial<
 > = {
   'needs-permission': {
     icon: 'location-outline',
-    text: 'Autorise la localisation pour voir où tu es et les arrêts autour de toi.',
+    text: 'Autorisez la localisation pour voir où vous êtes et les arrêts autour de vous.',
     action: 'Autoriser',
   },
   denied: {
     icon: 'location-outline',
-    text: 'Yoonbi n’a pas accès à ta position. Active-la dans les Réglages pour être guidé.',
+    text: 'Yoonbi n’a pas accès à votre position. Activez-la dans les Réglages pour être guidé.',
     action: 'Ouvrir les Réglages',
   },
   'services-off': {
     icon: 'cellular-outline',
-    text: 'La localisation de ton téléphone est coupée. Active-la dans Réglages › Confidentialité.',
+    text: 'La localisation de votre téléphone est coupée. Activez-la dans Réglages › Confidentialité.',
     action: 'Ouvrir les Réglages',
   },
 };
@@ -351,7 +351,7 @@ export default function HomeScreen() {
       if (result.status === 'ok') {
         keepCameraRef.current = true;
         setActiveTrip({ origin: result.origin, destination: trip.destination, plan: result.options[0].plan });
-        setRerouteNotice(reason ? `${reason} — nouvel itinéraire` : 'Nouvel itinéraire depuis ta position');
+        setRerouteNotice(reason ? `${reason} — nouvel itinéraire` : 'Nouvel itinéraire depuis votre position');
       } else if (result.status === 'no-service') {
         setRerouteNotice(result.message);
       } else {
@@ -602,8 +602,8 @@ export default function HomeScreen() {
                     {(() => {
                       const seg = activeTrip.plan.segments[nav.stepIndex];
                       return seg.type === 'ride'
-                        ? `Descends à ${seg.alightStopName}`
-                        : `Rejoins ${seg.toStopName}`;
+                        ? `Descendez à ${seg.alightStopName}`
+                        : `Rejoignez ${seg.toStopName}`;
                     })()}
                   </Text>
                 </View>
@@ -629,7 +629,7 @@ export default function HomeScreen() {
         <View style={styles.loadingOverlay} pointerEvents="none">
           <View style={styles.loadingPill}>
             <ActivityIndicator color={c.yonn} size="small" />
-            <Text style={styles.loadingText}>Recherche de ta position…</Text>
+            <Text style={styles.loadingText}>Recherche de votre position…</Text>
           </View>
         </View>
       )}
@@ -648,7 +648,7 @@ export default function HomeScreen() {
               ) : (
                 <View style={styles.waitingBanner}>
                   <ActivityIndicator color={c.yonn} size="small" />
-                  <Text style={styles.waitingText}>En attente du signal GPS pour te guider…</Text>
+                  <Text style={styles.waitingText}>En attente du signal GPS pour vous guider…</Text>
                 </View>
               )}
             </View>
@@ -793,7 +793,7 @@ export default function HomeScreen() {
           {arrived && (
             <View style={styles.arrivedBanner}>
               <Ionicons name="checkmark-circle" size={17} color={c.yonnDeep} />
-              <Text style={styles.arrivedText}>Tu es arrivé à destination</Text>
+              <Text style={styles.arrivedText}>Vous êtes arrivé à destination</Text>
             </View>
           )}
 

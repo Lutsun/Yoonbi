@@ -48,30 +48,30 @@ export function describeAuthError(error: unknown): string {
     status === 0
   ) {
     return __DEV__
-      ? 'Serveur injoignable. Vérifie ta connexion, et que le projet Supabase n’est pas en pause.'
-      : 'Service momentanément indisponible. Réessaie dans un instant.';
+      ? 'Serveur injoignable. Vérifiez votre connexion, et que le projet Supabase n’est pas en pause.'
+      : 'Service momentanément indisponible. Réessayez dans un instant.';
   }
 
   // Trop de demandes de code pour ce numéro.
   if (status === 429 || message.includes('rate limit') || message.includes('too many')) {
-    return 'Trop de demandes. Attends une minute avant de redemander un code.';
+    return 'Trop de demandes. Attendez une minute avant de redemander un code.';
   }
 
   // L'envoi du SMS a échoué côté fournisseur : en pratique, un numéro qui
   // n'est pas autorisé à recevoir de code sur la configuration actuelle.
   if (message.includes('sms') || message.includes('provider')) {
     return __DEV__
-      ? 'Ce numéro ne peut pas recevoir de code : ajoute-le aux numéros de test Supabase (Authentication → Providers → Phone), ou configure un fournisseur SMS.'
+      ? 'Ce numéro ne peut pas recevoir de code : ajoutez-le aux numéros de test Supabase (Authentication → Providers → Phone), ou configurez un fournisseur SMS.'
       : 'Ce numéro ne peut pas recevoir de code pour le moment.';
   }
 
   if (message.includes('invalid') && message.includes('phone')) {
-    return 'Numéro invalide. Vérifie les 9 chiffres.';
+    return 'Numéro invalide. Vérifiez les 9 chiffres.';
   }
 
   if (message.includes('expired') || message.includes('token')) {
     return 'Code incorrect ou expiré.';
   }
 
-  return 'Impossible d’envoyer le code. Réessaie dans un instant.';
+  return 'Impossible d’envoyer le code. Réessayez dans un instant.';
 }
