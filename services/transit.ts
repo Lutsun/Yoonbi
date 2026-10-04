@@ -1,6 +1,12 @@
 import { supabase } from './supabase';
 import { Line, Operator, RouteGraphRow, Stop } from '../types/transit';
-import { loadNetworkCache, saveNetworkCache } from './offlineCache';
+import {
+  loadNetworkCache,
+  loadSchedulesCache,
+  saveNetworkCache,
+  saveSchedulesCache,
+  ScheduleRow,
+} from './offlineCache';
 
 export async function getOperators(): Promise<Operator[]> {
   const { data, error } = await supabase.from('operators').select('*');
@@ -72,5 +78,19 @@ export async function getRouteGraph(): Promise<RouteGraphRow[]> {
     const cached = await loadNetworkCache();
     if (cached) return cached;
     throw err;
+  }
+}
+
+// Horaires de toutes les lignes, pour le planificateur (services/journey.ts).
+// Même secours hors ligne que le réseau ; sans aucune donnée, on renvoie une
+// liste vide — aucune ligne n'est alors écartée.
+export async function getLineSchedules(): Promise<ScheduleRow[]> {
+  try {
+    const { data, error } = await supabase.from('lines').select('id, hours_label, schedule_estimated');
+    if (error) throw error;
+    saveSchedulesCache(data);
+    return data;
+  } catch {
+    return (await loadSchedulesCache()) ?? [];
   }
 }

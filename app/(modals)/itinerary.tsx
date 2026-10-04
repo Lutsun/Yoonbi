@@ -17,33 +17,22 @@ import ScreenHeader from '../../components/ui/ScreenHeader';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { Fonts, Radii, Spacing, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
-import { getNearbyStops, getRouteGraph, searchStops } from '../../services/transit';
+import { getNearbyStops, searchStops } from '../../services/transit';
 import { searchPlaces } from '../../services/places';
-import {
-  buildRouteGraph,
-  pickBestOptions,
-  planFromPosition,
-  planTripOptions,
-  RouteGraph,
-  USER_POSITION_ID,
-  withEgressWalk,
-} from '../../services/routing';
+import { planJourney } from '../../services/journey';
 import { useUserLocation } from '../../store/LocationContext';
 import { useTrip } from '../../store/TripContext';
 import { useAuth } from '../../store/AuthContext';
-import { Stop, TripPlan } from '../../types/transit';
+import { Stop } from '../../types/transit';
 import { formatDistance } from '../../utils/eta';
 
-// Le graphe du réseau ne change pas pendant une session : on le garde en
-// mémoire pour ne pas le recharger à chaque recherche.
-let cachedGraph: RouteGraph | null = null;
-
 type Field = 'origin' | 'destination';
-type Outcome = 'none' | 'no-path' | 'same-stop' | 'error' | 'no-location';
+type Outcome = 'none' | 'no-path' | 'same-stop' | 'no-service' | 'error' | 'no-location';
 
 const OUTCOME_MESSAGE: Record<Exclude<Outcome, 'none'>, string> = {
   'no-path': 'Ces deux arrêts ne sont pas encore reliés dans le réseau Yoonbi.',
   'same-stop': 'Le départ et la destination sont le même arrêt.',
+  'no-service': 'Les lignes qui font ce trajet ne circulent pas à cette heure. Réessaie aux heures de service.',
   error: 'Impossible de calculer l’itinéraire. Vérifie ta connexion.',
   'no-location': 'Active la localisation pour partir de ta position exacte.',
 };
@@ -236,76 +225,17 @@ export default function ItineraryScreen() {
     setLoading(true);
     setOutcome('none');
     try {
-      if (!cachedGraph) cachedGraph = buildRouteGraph(await getRouteGraph());
-
-      let from: Stop;
-      let options;
-
-      if (destination.isPlace) {
-        // Un lieu n'est pas un arrêt : on vise les arrêts les plus proches de
-        // lui, puis on ajoute la marche finale jusqu'à sa porte.
-        let exits = await getNearbyStops(destination.latitude, destination.longitude, 1000);
-        if (exits.length === 0) {
-          exits = await getNearbyStops(destination.latitude, destination.longitude, 2500);
-        }
-        if (exits.length === 0) {
-          setOutcome('no-path');
-          return;
-        }
-
-        const startCandidates =
-          originIsUser && position
-            ? await getNearbyStops(position.latitude, position.longitude, 1200).then(async (c) =>
-                c.length > 0 ? c : getNearbyStops(position.latitude, position.longitude, 3000)
-              )
-            : [];
-
-        const plans: TripPlan[] = [];
-        for (const exit of exits.slice(0, 3)) {
-          const found =
-            originIsUser && position
-              ? planFromPosition(cachedGraph, position, startCandidates, exit.id)
-              : planTripOptions(cachedGraph, origin!.id, exit.id);
-          for (const option of found) {
-            if (option.plan.segments.length === 0) continue;
-            plans.push(withEgressWalk(option.plan, exit, destination));
-          }
-        }
-        options = pickBestOptions(plans);
-        from =
-          originIsUser && position
-            ? { id: USER_POSITION_ID, name: 'Ma position', latitude: position.latitude, longitude: position.longitude }
-            : origin!;
-      } else if (originIsUser && position) {
-        // Départ réel : on compare les arrêts accessibles à pied (d'abord
-        // dans un rayon de marche raisonnable, sinon un peu plus loin).
-        let candidates = await getNearbyStops(position.latitude, position.longitude, 1200);
-        if (candidates.length === 0) {
-          candidates = await getNearbyStops(position.latitude, position.longitude, 3000);
-        }
-        options = planFromPosition(cachedGraph, position, candidates, destination.id);
-        // Le départ affiché et enregistré est la position de l'utilisateur.
-        from = {
-          id: USER_POSITION_ID,
-          name: 'Ma position',
-          latitude: position.latitude,
-          longitude: position.longitude,
-        };
-      } else {
-        options = planTripOptions(cachedGraph, origin!.id, destination.id);
-        from = origin!;
-        if (options.length > 0 && options[0].plan.segments.length === 0) {
-          setOutcome('same-stop');
-          return;
-        }
-      }
-
-      if (options.length === 0) {
-        setOutcome('no-path');
+      const result = await planJourney(
+        originIsUser && position ? { position } : { stop: origin! },
+        destination
+      );
+      if (result.status !== 'ok') {
+        setOutcome(result.status);
         return;
       }
-
-      setPendingTrip({ origin: from, destination, options });
+      // Le départ affiché et enregistré est la position de l'utilisateur
+      // quand il part de là où il est.
+      setPendingTrip({ origin: result.origin, destination, options: result.options });
       router.push('/(modals)/choose-trip');
     } catch {
       setOutcome('error');

@@ -132,6 +132,13 @@ function OptionCard({
         </Text>
         {selected && <Ionicons name="checkmark-circle" size={20} color={colors.yonn} />}
       </View>
+
+      {!!option.warning && (
+        <View style={styles.warning}>
+          <Ionicons name="time-outline" size={14} color={colors.gold} />
+          <Text style={styles.warningText}>{option.warning}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -202,6 +209,8 @@ const createStyles = (c: Palette) =>
       marginTop: Spacing.sm,
     },
     summary: { flex: 1, fontFamily: Fonts.body, fontSize: 13, color: c.inkFaint },
+    warning: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm },
+    warningText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 12, color: c.gold },
 
     cta: { marginTop: Spacing.sm },
   });

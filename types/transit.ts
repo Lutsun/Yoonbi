@@ -64,6 +64,28 @@ export type RouteGraphRow = {
 
 export type LatLng = { latitude: number; longitude: number };
 
+// Un arrêt traversé pendant un trajet en bus — de l'arrêt de montée à celui
+// de descente inclus. C'est ce qui permet d'annoncer « prochain arrêt » et
+// « encore 3 arrêts » pendant le guidage.
+export type StopRef = { id: string; name: string; latitude: number; longitude: number };
+
+// Une consigne de navigation à pied (« Tourne à gauche sur Avenue X »),
+// placée à l'endroit où il faut l'exécuter.
+export type ManeuverKind =
+  | 'depart'
+  | 'straight'
+  | 'left'
+  | 'right'
+  | 'slight-left'
+  | 'slight-right'
+  | 'sharp-left'
+  | 'sharp-right'
+  | 'uturn'
+  | 'roundabout'
+  | 'arrive';
+
+export type Maneuver = LatLng & { kind: ManeuverKind; text: string };
+
 export type RideSegment = {
   type: 'ride';
   lineId: string;
@@ -79,6 +101,10 @@ export type RideSegment = {
   stopsCount: number;
   minutes: number;
   path: LatLng[];
+  /** Arrêts traversés, montée et descente inclus (absent sur d'anciens trajets en cache). */
+  stops?: StopRef[];
+  /** Terminus vers lequel roule le bus — « direction Palais de Justice ». */
+  headsign?: string;
 };
 
 export type WalkSegment = {
@@ -89,6 +115,8 @@ export type WalkSegment = {
   toStopName: string;
   minutes: number;
   path: LatLng[];
+  /** Consignes tournant par tournant, quand le tracé à pied a pu être calculé. */
+  maneuvers?: Maneuver[];
 };
 
 export type TripSegment = RideSegment | WalkSegment;
@@ -106,4 +134,9 @@ export type TripPlan = {
 export type TripOption = {
   plan: TripPlan;
   recommended: boolean;
+  /**
+   * Mise en garde à afficher avec l'option — par exemple une ligne dont
+   * l'horaire n'est qu'estimé et qui ne circule peut-être plus à cette heure.
+   */
+  warning?: string;
 };

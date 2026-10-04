@@ -77,3 +77,49 @@ export async function clearLastTrip(): Promise<void> {
     // rien à faire : au pire, le prochain chargement dépassera juste l'âge max.
   }
 }
+
+// Tracés réels des lignes (table line_shapes) — même logique que le réseau :
+// mis à jour à chaque chargement réussi, relu seulement hors ligne.
+const SHAPES_KEY = 'yoonbi_line_shapes_v1';
+
+export type ShapeRow = { line_id: string; coords: [number, number][] };
+
+export async function saveShapesCache(rows: ShapeRow[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SHAPES_KEY, JSON.stringify(rows));
+  } catch {
+    // confort uniquement
+  }
+}
+
+// Horaires des lignes — pour qu'hors ligne aussi, le planificateur écarte
+// une ligne qui ne circule pas à cette heure.
+const SCHEDULES_KEY = 'yoonbi_line_schedules_v1';
+
+export type ScheduleRow = { id: string; hours_label: string | null; schedule_estimated: boolean };
+
+export async function saveSchedulesCache(rows: ScheduleRow[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SCHEDULES_KEY, JSON.stringify(rows));
+  } catch {
+    // confort uniquement
+  }
+}
+
+export async function loadSchedulesCache(): Promise<ScheduleRow[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(SCHEDULES_KEY);
+    return raw ? (JSON.parse(raw) as ScheduleRow[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadShapesCache(): Promise<ShapeRow[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(SHAPES_KEY);
+    return raw ? (JSON.parse(raw) as ShapeRow[]) : null;
+  } catch {
+    return null;
+  }
+}

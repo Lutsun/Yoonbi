@@ -14,11 +14,37 @@
 //  - chaque ligne dessert ses arrêts dans les deux sens
 
 import { distanceKm } from '../utils/eta';
-import { LatLng, RouteGraphRow, Stop, TripOption, TripPlan, TripSegment } from '../types/transit';
+import {
+  LatLng,
+  RouteGraphRow,
+  Stop,
+  StopRef,
+  TripOption,
+  TripPlan,
+  TripSegment,
+} from '../types/transit';
 
-const BUS_SPEED_KMH = 16;
+// Vitesses commerciales, arrêts et circulation compris. Source : le BRT relie
+// Guédiawaye à Petersen (18,3 km) en 45 min, contre 90 min en bus classique
+// sur le même axe (Bureau Information Gouvernementale, CETUD) — soit environ
+// 24 km/h en voie réservée et 12 km/h dans la circulation.
+const BRT_SPEED_KMH = 24;
+const BUS_SPEED_KMH = 12;
 const WALK_SPEED_KMH = 4.5;
+// Attente moyenne à l'arrêt : la moitié de l'intervalle entre deux bus. Le BRT
+// passe toutes les 6 min (sunubrt.sn) ; pour les autres réseaux, sans horaire
+// publié, on retient une hypothèse de 6 min.
+const BRT_WAIT_MINUTES = 3;
 const BOARD_WAIT_MINUTES = 6;
+// Une correspondance coûte plus que le temps qu'elle prend (risque de rater
+// le bus, descendre, chercher l'arrêt) : comme les applis de transport, on
+// préfère un trajet direct à un trajet à peine plus court avec changement.
+// Cette pénalité influence le choix du trajet, jamais la durée affichée.
+const BOARDING_PENALTY_MINUTES = 5;
+// Distance à vol d'oiseau → distance par la route : négligeable entre deux
+// arrêts proches, nettement plus marquée entre deux arrêts éloignés.
+const SHORT_HOP_KM = 0.6;
+const LONG_HOP_DETOUR = 1.3;
 const WALK_TRANSFER_RADIUS_KM = 0.35;
 // En dessous, on considère que l'utilisateur est déjà à l'arrêt : inutile de
 // lui afficher une étape "marcher 20 m".
@@ -48,7 +74,19 @@ export type RouteGraph = {
   stops: Map<string, GraphStop>;
   rideEdges: Map<string, RideEdge[]>;
   walkEdges: Map<string, WalkEdge[]>;
+  /** Arrêts de chaque ligne dans l'ordre — pour connaître la direction du bus. */
+  lineStops: Map<string, string[]>;
 };
+
+function rideMinutes(km: number, operatorShortName: string): number {
+  const roadKm = km < SHORT_HOP_KM ? km : km * LONG_HOP_DETOUR;
+  const speed = operatorShortName === 'BRT' ? BRT_SPEED_KMH : BUS_SPEED_KMH;
+  return (roadKm / speed) * 60;
+}
+
+function waitMinutes(operatorShortName: string): number {
+  return operatorShortName === 'BRT' ? BRT_WAIT_MINUTES : BOARD_WAIT_MINUTES;
+}
 
 function addEdge<T>(map: Map<string, T[]>, fromId: string, edge: T) {
   const list = map.get(fromId);
@@ -92,13 +130,17 @@ export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
     else byLine.set(row.line_id, [row]);
   }
 
-  for (const lineRows of byLine.values()) {
+  const lineStops = new Map<string, string[]>();
+  for (const [lineId, lineRows] of byLine) {
     lineRows.sort((a, b) => a.sequence - b.sequence);
+    lineStops.set(lineId, lineRows.map((r) => r.stop_id));
     for (let i = 0; i < lineRows.length - 1; i++) {
       const a = lineRows[i];
       const b = lineRows[i + 1];
       const km = distanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
-      const minutes = Math.max(1, Math.round((km / BUS_SPEED_KMH) * 60));
+      // Fractionnaire : arrondir chaque tronçon à la minute gonflerait les
+      // longues lignes aux arrêts rapprochés. L'arrondi se fait par étape.
+      const minutes = rideMinutes(km, a.operator_short_name);
       const base = {
         kind: 'ride' as const,
         minutes,
@@ -128,7 +170,7 @@ export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
     }
   }
 
-  return { stops, rideEdges, walkEdges };
+  return { stops, rideEdges, walkEdges, lineStops };
 }
 
 type PathEdge = (RideEdge | WalkEdge) & { fromStopId: string };
@@ -192,8 +234,11 @@ function findShortestPath(
 
     for (const edge of graph.rideEdges.get(stopId) ?? []) {
       if (excludeLineIds?.has(edge.lineId)) continue;
-      const wait = currentLineId === edge.lineId ? 0 : BOARD_WAIT_MINUTES;
-      const newDist = currentDist + edge.minutes + wait;
+      const boarding = currentLineId !== edge.lineId;
+      const wait = boarding ? waitMinutes(edge.operatorShortName) : 0;
+      // `dist` est un coût (temps + pénalité de montée), pas une durée : la
+      // durée réelle reste celle portée par l'arête.
+      const newDist = currentDist + edge.minutes + wait + (boarding ? BOARDING_PENALTY_MINUTES : 0);
       const newKey = stateKey(edge.toStopId, edge.lineId);
       if (newDist < (dist.get(newKey) ?? Infinity)) {
         dist.set(newKey, newDist);
@@ -228,6 +273,21 @@ function coordOf(graph: RouteGraph, stopId: string) {
   };
 }
 
+function stopRefOf(graph: RouteGraph, stopId: string): StopRef {
+  return { id: stopId, name: graph.stops.get(stopId)?.name ?? '', ...coordOf(graph, stopId) };
+}
+
+// Terminus vers lequel roule le bus entre deux arrêts de sa ligne.
+function headsignOf(graph: RouteGraph, lineId: string, fromStopId: string, toStopId: string) {
+  const order = graph.lineStops.get(lineId);
+  if (!order) return undefined;
+  const from = order.indexOf(fromStopId);
+  const to = order.indexOf(toStopId);
+  if (from < 0 || to < 0 || from === to) return undefined;
+  const terminusId = to > from ? order[order.length - 1] : order[0];
+  return graph.stops.get(terminusId)?.name;
+}
+
 function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
   const segments: TripSegment[] = [];
 
@@ -241,6 +301,7 @@ function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
         last.stopsCount += 1;
         last.minutes += edge.minutes;
         last.path.push(coordOf(graph, edge.toStopId));
+        last.stops?.push(stopRefOf(graph, edge.toStopId));
         continue;
       }
       segments.push({
@@ -258,6 +319,7 @@ function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
         stopsCount: 1,
         minutes: edge.minutes,
         path: [coordOf(graph, edge.fromStopId), coordOf(graph, edge.toStopId)],
+        stops: [stopRefOf(graph, edge.fromStopId), stopRefOf(graph, edge.toStopId)],
       });
     } else {
       if (last?.type === 'walk') {
@@ -279,6 +341,15 @@ function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
     }
   }
 
+  // Les durées des tronçons sont fractionnaires : on arrondit une fois par
+  // étape, au moins une minute, pour que les durées affichées tombent juste.
+  for (const segment of segments) {
+    segment.minutes = Math.max(1, Math.round(segment.minutes));
+    if (segment.type === 'ride') {
+      segment.headsign = headsignOf(graph, segment.lineId, segment.boardStopId, segment.alightStopId);
+    }
+  }
+
   return segments;
 }
 
@@ -296,7 +367,7 @@ export function planTrip(
   if (path.length === 0) return { totalMinutes: 0, totalFareFcfa: 0, totalWalkMinutes: 0, segments: [] };
 
   const segments = segmentsFromPath(graph, path);
-  const totalMinutes = path.reduce((sum, edge) => sum + edge.minutes, 0);
+  const totalMinutes = segments.reduce((sum, s) => sum + s.minutes, 0);
   const totalFareFcfa = segments
     .filter((s): s is Extract<TripSegment, { type: 'ride' }> => s.type === 'ride')
     .reduce((sum, s) => sum + s.fareFcfa, 0);
