@@ -125,10 +125,12 @@ function OptionCard({
 
       <View style={styles.cardFoot}>
         <Text style={styles.summary}>
-          {changes === 0
+          {rides.length === 0
+            ? 'Tout à pied, sans bus'
+            : changes === 0
             ? 'Direct, sans correspondance'
             : `${changes} correspondance${changes > 1 ? 's' : ''}`}
-          {plan.totalWalkMinutes > 0 ? ` · ${plan.totalWalkMinutes} min à pied` : ''}
+          {rides.length > 0 && plan.totalWalkMinutes > 0 ? ` · ${plan.totalWalkMinutes} min à pied` : ''}
         </Text>
         {selected && <Ionicons name="checkmark-circle" size={20} color={colors.yonn} />}
       </View>

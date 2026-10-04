@@ -382,6 +382,42 @@ export function planTrip(
 // l'arrêt où il monte. Sans ça le trajet démarre à l'arrêt, comme si
 // l'utilisateur y était déjà téléporté : le temps annoncé était donc
 // systématiquement sous-estimé.
+// Deux marches qui se suivent — l'approche jusqu'à un arrêt, puis une marche
+// de correspondance qui en repart — n'en font qu'une : passer par l'arrêt
+// serait un détour. On marche directement du premier point au dernier (c'est
+// le cas d'une option « tout à pied »).
+function mergeConsecutiveWalks(plan: TripPlan): TripPlan {
+  const segments: TripSegment[] = [];
+  for (const segment of plan.segments) {
+    const previous = segments[segments.length - 1];
+    if (segment.type === 'walk' && previous?.type === 'walk') {
+      const from = previous.path[0];
+      const to = segment.path[segment.path.length - 1];
+      const km = distanceKm(from.latitude, from.longitude, to.latitude, to.longitude);
+      segments[segments.length - 1] = {
+        ...previous,
+        toStopId: segment.toStopId,
+        toStopName: segment.toStopName,
+        minutes: Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60)),
+        path: [from, to],
+      };
+    } else {
+      segments.push(segment);
+    }
+  }
+  if (segments.length === plan.segments.length) return plan;
+
+  const walkMinutes = (list: TripSegment[]) =>
+    list.reduce((sum, s) => sum + (s.type === 'walk' ? s.minutes : 0), 0);
+  const saved = walkMinutes(plan.segments) - walkMinutes(segments);
+  return {
+    ...plan,
+    segments,
+    totalMinutes: plan.totalMinutes - saved,
+    totalWalkMinutes: plan.totalWalkMinutes - saved,
+  };
+}
+
 export function withAccessWalk(plan: TripPlan, from: LatLng, boardingStop: Stop): TripPlan {
   const km = distanceKm(from.latitude, from.longitude, boardingStop.latitude, boardingStop.longitude);
   if (km < MIN_ACCESS_WALK_KM) return plan;
@@ -400,12 +436,12 @@ export function withAccessWalk(plan: TripPlan, from: LatLng, boardingStop: Stop)
     ],
   };
 
-  return {
+  return mergeConsecutiveWalks({
     ...plan,
     totalMinutes: plan.totalMinutes + minutes,
     totalWalkMinutes: plan.totalWalkMinutes + minutes,
     segments: [walk, ...plan.segments],
-  };
+  });
 }
 
 // Ajoute la marche finale entre l'arrêt où l'on descend et le lieu visé
@@ -428,12 +464,12 @@ export function withEgressWalk(plan: TripPlan, alightStop: Stop, place: LatLng &
     ],
   };
 
-  return {
+  return mergeConsecutiveWalks({
     ...plan,
     totalMinutes: plan.totalMinutes + minutes,
     totalWalkMinutes: plan.totalWalkMinutes + minutes,
     segments: [...plan.segments, walk],
-  };
+  });
 }
 
 /**
