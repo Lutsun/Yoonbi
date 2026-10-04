@@ -12,7 +12,13 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 
 - **Connexion par numéro de téléphone** — un code reçu par SMS, sans mot de passe ni e-mail à retenir. Vraie authentification Supabase Auth (pas de comptes faits main) : sessions sécurisées, rafraîchissement automatique, et permissions filtrées par utilisateur (Row Level Security via `auth.uid()`)
 - **Écran d'accueil avec carte en direct** — la position de l'utilisateur, les arrêts de bus autour de lui et les lignes qui les desservent
-- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`)
+- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`). Une ligne dont l'horaire est confirmé n'est jamais proposée hors de ses heures de service (pas de B3 un dimanche) ; une ligne à l'horaire estimé l'est, avec une mise en garde (voir `services/serviceHours.ts`)
+- **Guidage pas à pas, comme un GPS** (voir `services/navigation.ts`) :
+  - à pied, consignes tournant par tournant sur les vraies rues (« Tourne à gauche sur Route de Niayes · dans 40 m ») ;
+  - à l'arrêt, la ligne et sa direction (« Prends la B1 · direction Petersen ») ;
+  - dans le bus, le décompte des arrêts (« Encore 9 arrêts · prochain : Scat Urbam ») et un rappel avant de descendre ;
+  - sur la carte, le chemin déjà parcouru est grisé, le reste reste en couleur ;
+  - recalcul automatique : chemin à pied refait en cas d'écart, trajet entier refait si le bus part ailleurs ou si l'arrêt de descente est manqué ; un simple détour du bus ne déclenche rien, le guidage reprend dès qu'il retrouve son trajet
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
 - **Horaires et fréquence par ligne** — amplitude horaire et fréquence de passage sur la fiche de chaque ligne, avec la mention « estimation » quand l'exploitant ne publie pas d'horaire précis (voir `supabase/schema.sql`)
 - **Cache hors-ligne du réseau et du dernier trajet** — le réseau (lignes et arrêts) reste utilisable sans connexion, et un guidage interrompu par une coupure réseau peut être repris au relancement de l'app (voir `services/offlineCache.ts`)
@@ -36,7 +42,9 @@ app/                    Écrans (Expo Router)
   (modals)/                détail d'un arrêt/bus, planificateur d'itinéraire
 components/auth/        Composants d'interface réutilisables
 constants/theme.ts       Couleurs, typographies, espacements — le design system
-services/                Accès aux données (auth, transport, client Supabase, planificateur d'itinéraire)
+services/                Accès aux données (auth, transport, client Supabase), planificateur d'itinéraire, guidage
+scripts/
+  build_line_shapes.py    Génère supabase/line_shapes.sql depuis OpenStreetMap (tracés réels des lignes)
 store/                  État global (session utilisateur)
 types/                  Types TypeScript partagés
 utils/                  Fonctions utilitaires (validation de numéro, ...)
@@ -48,6 +56,8 @@ supabase/
   admin.sql               Droits d'administration pour la console web (admin/)
   contributions.sql       Lignes proposées par les usagers, en attente de relecture admin
   fix_orphan_stops.sql    Correctif ponctuel : arrêts sans ligne laissés par d'anciens rejeux de seed.sql
+  line_shapes.sql         Positions d'arrêts relevées + tracés réels des lignes (généré, OpenStreetMap, ODbL)
+  line_hours.sql          Horaires des lignes, utilisés par le planificateur
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
@@ -71,6 +81,10 @@ Le réseau chargé par l'application vient de deux fichiers, dont le niveau de f
 Dans les deux cas, les **opérateurs, numéros de ligne, terminus et tarifs sont sourcés**, et les noms d'arrêts sont de vrais lieux de Dakar. Ce qui reste approximatif dans `seed.sql`, ce sont les positions GPS et surtout l'ordre des arrêts intermédiaires : les sources publiques ne publient que les terminus et quelques points de passage. Les durées et les prix calculés sont donc des ordres de grandeur, pas des horaires.
 
 `seed_osm.sql` fait autorité sur les lignes qu'il couvre et remplace leur tracé approximatif. Ses données sont sous licence **ODbL** : leur réutilisation impose de citer « © les contributeurs OpenStreetMap ».
+
+`line_shapes.sql`, généré par `scripts/build_line_shapes.py`, ajoute le **chemin exact suivi par le bus** pour les lignes dont la relation OpenStreetMap colle à nos arrêts (BRT B1 et B3, DDD 4, 7, 9 et 10) : chaque tracé n'est retenu que si tous les arrêts de la ligne sont à moins de 250 m de lui, dans l'ordre. Pour les autres lignes, l'app suit les rues d'arrêt en arrêt. Le même fichier applique les positions relevées sur le terrain que `seed_osm.sql` n'avait pas pu poser sur des arrêts déjà existants.
+
+Les durées de trajet reposent sur des vitesses sourcées : le BRT relie Guédiawaye à Petersen (18,3 km) en 45 min contre 90 min en bus classique (Bureau d'information gouvernementale, big.gouv.sn), soit ~24 km/h pour le BRT et ~12 km/h pour les autres bus ; l'attente moyenne au BRT découle de sa fréquence officielle (toutes les 6 min, sunubrt.sn).
 
 Pour aller plus loin, la piste la plus solide serait un export GTFS du CETUD (l'autorité organisatrice des transports de Dakar), qui fournirait les tracés et les horaires officiels.
 
@@ -101,7 +115,7 @@ cp .env.example .env
 Configuration Supabase :
 
 1. Si tu reviens d'une ancienne version du projet (table `users` faite main) : exécute d'abord `supabase/migrate_to_auth.sql` une seule fois. Sur un projet Supabase tout neuf, passe directement à l'étape 2.
-2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, puis `supabase/contributions.sql`.
+2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, puis `supabase/line_hours.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
 ```bash
