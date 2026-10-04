@@ -71,8 +71,9 @@ const PREPARE_ALIGHT_LAST_STOP_M = 800;
 const REROUTE_COOLDOWN_MS = 30000;
 
 // Chemin déjà parcouru : grisé, comme sur un GPS, pour que le reste ressorte.
+// Assez clair en mode sombre pour ne pas se confondre avec les routes.
 const TRAVELED_LIGHT = '#B9C0CA';
-const TRAVELED_DARK = '#4B5462';
+const TRAVELED_DARK = '#8A94A3';
 // Marche à venir : en points bleus, distincte des lignes de bus. Des traits
 // courts aux bouts arrondis se rejoignaient en un boudin informe ; un tiret
 // quasi nul arrondi dessine un point rond, espacé régulièrement.
