@@ -12,7 +12,7 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 
 - **Connexion par numéro de téléphone** — un code reçu par SMS, sans mot de passe ni e-mail à retenir. Vraie authentification Supabase Auth (pas de comptes faits main) : sessions sécurisées, rafraîchissement automatique, et permissions filtrées par utilisateur (Row Level Security via `auth.uid()`)
 - **Écran d'accueil avec carte en direct** — la position de l'utilisateur, les arrêts de bus autour de lui et les lignes qui les desservent
-- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`). Une ligne dont l'horaire est confirmé n'est jamais proposée hors de ses heures de service (pas de B3 un dimanche) ; une ligne à l'horaire estimé l'est, avec une mise en garde (voir `services/serviceHours.ts`)
+- **Planificateur d'itinéraire (fonctionnalité principale)** — l'utilisateur indique un point de départ et une destination ; Yoonbi calcule le meilleur trajet à travers le réseau réel : lignes à emprunter, correspondances, arrêt où descendre, temps estimé et coût estimé (voir `services/routing.ts`). Une ligne dont l'horaire est confirmé n'est jamais proposée hors de ses heures de service (pas de B3 un dimanche), et l'app dit quand elle reprend (« Le B1 ne circule plus à cette heure — reprise demain à 6h ») ; une ligne à l'horaire estimé reste proposée avec une mise en garde, et une option sûre (autre ligne, ou à pied) passe devant si elle ne coûte pas plus de 10 minutes (voir `services/serviceHours.ts` et `services/journey.ts`)
 - **Guidage pas à pas, comme un GPS** (voir `services/navigation.ts`) :
   - à pied, consignes tournant par tournant sur les vraies rues (« Tourne à gauche sur Route de Niayes · dans 40 m ») ;
   - à l'arrêt, la ligne et sa direction (« Prends la B1 · direction Petersen ») ;
@@ -58,6 +58,7 @@ supabase/
   fix_orphan_stops.sql    Correctif ponctuel : arrêts sans ligne laissés par d'anciens rejeux de seed.sql
   line_shapes.sql         Positions d'arrêts relevées + tracés réels des lignes (généré, OpenStreetMap, ODbL)
   line_hours.sql          Horaires des lignes, utilisés par le planificateur
+  fix_plateau_stop_order.sql  Correctif : ordre des arrêts El Malick / Ville sur les lignes DDD 4, 7, 9 et 23
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
@@ -115,7 +116,7 @@ cp .env.example .env
 Configuration Supabase :
 
 1. Si tu reviens d'une ancienne version du projet (table `users` faite main) : exécute d'abord `supabase/migrate_to_auth.sql` une seule fois. Sur un projet Supabase tout neuf, passe directement à l'étape 2.
-2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, puis `supabase/line_hours.sql`.
+2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, puis `supabase/fix_plateau_stop_order.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
 ```bash
