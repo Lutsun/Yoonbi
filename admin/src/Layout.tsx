@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, LogOut } from 'lucide-react';
+import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, Siren, LogOut } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
-import { getStats } from './lib/api';
+import { getStats, listReports } from './lib/api';
 
 const LINKS = [
   { to: '/', label: 'Tableau de bord', end: true, icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/lignes', label: 'Lignes', icon: GitBranch },
   { to: '/arrets', label: 'Arrêts', icon: MapPin },
   { to: '/contributions', label: 'Contributions', icon: Inbox },
+  { to: '/signalements', label: 'Signalements', icon: Siren },
   { to: '/utilisateurs', label: 'Utilisateurs', icon: Users },
 ];
 
@@ -17,10 +18,14 @@ export default function Layout() {
   const { email, signOut } = useAuth();
   const initial = email?.trim().charAt(0).toUpperCase() || '?';
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingReports, setPendingReports] = useState(0);
 
   useEffect(() => {
     getStats()
       .then((stats) => setPendingCount(stats.pending_submissions))
+      .catch(() => {});
+    listReports('pending')
+      .then((reports) => setPendingReports(reports.length))
       .catch(() => {});
   }, []);
 
@@ -47,6 +52,9 @@ export default function Layout() {
                 {link.label}
                 {link.to === '/contributions' && pendingCount > 0 && (
                   <span className="sidebar-link-badge">{pendingCount}</span>
+                )}
+                {link.to === '/signalements' && pendingReports > 0 && (
+                  <span className="sidebar-link-badge">{pendingReports}</span>
                 )}
               </NavLink>
             );

@@ -1,5 +1,17 @@
 import { supabase } from './supabase';
-import type { Line, LineStop, Operator, Stats, Stop, Submission, SubmissionStatus, SubmissionStop, YoonbiUser } from './types';
+import type {
+  Line,
+  LineStop,
+  Operator,
+  Report,
+  ReportStatus,
+  Stats,
+  Stop,
+  Submission,
+  SubmissionStatus,
+  SubmissionStop,
+  YoonbiUser,
+} from './types';
 
 // Toutes les lectures et écritures de la console passent par ici : les écrans
 // ne parlent jamais directement à Supabase.
@@ -175,6 +187,30 @@ export async function reviewSubmission(params: {
     p_approve: params.approve,
     p_review_note: params.reviewNote ?? null,
     p_line_id: params.lineId ?? null,
+  });
+  fail(error);
+}
+
+// Signalements ---------------------------------------------------------------
+
+export async function listReports(status: ReportStatus | null): Promise<Report[]> {
+  const { data, error } = await supabase.rpc('admin_list_reports', { p_status: status });
+  fail(error);
+  return data ?? [];
+}
+
+// Le parcours (En attente → En cours de vérification → Validé / Rejeté →
+// Résolu) est vérifié côté base ; la validation enregistre le signalement
+// comme information fiable (table network_incidents).
+export async function setReportStatus(params: {
+  reportId: string;
+  status: Exclude<ReportStatus, 'pending'>;
+  note?: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_report_status', {
+    p_report_id: params.reportId,
+    p_status: params.status,
+    p_note: params.note ?? null,
   });
   fail(error);
 }

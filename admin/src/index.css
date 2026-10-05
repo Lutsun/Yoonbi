@@ -390,6 +390,46 @@ tr[data-clickable] { cursor: pointer; }
 .badge-pending { background: var(--warning-tint); color: var(--warning); }
 .badge-approved { background: var(--yonn-tint); color: var(--yonn-dark); }
 .badge-rejected { background: var(--danger-tint); color: var(--danger); }
+.badge-reviewing { background: var(--fill); color: var(--ink-muted); }
+.badge-validated { background: var(--yonn-tint); color: var(--yonn-dark); }
+.badge-resolved { background: var(--fill); color: var(--yonn-dark); }
+
+/* Texte limité à deux lignes (descriptions des signalements dans la liste). */
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Frise de statut d'un signalement. */
+.status-steps { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.status-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.status-step.reached { color: var(--yonn-dark); border-color: var(--yonn-tint); background: var(--yonn-tint); }
+.status-step.current { border-color: var(--yonn); }
+.status-step-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: var(--fill);
+  color: var(--ink-muted);
+}
+.status-step.reached .status-step-dot { background: var(--yonn); color: #fff; }
 
 .avatar-circle {
   width: 32px;

@@ -79,3 +79,29 @@ export type SubmissionStop = {
   longitude: number;
   accuracy_meters: number | null;
 };
+
+// Signalements des usagers — voir supabase/reports.sql.
+export type ReportType = 'wrong_stop' | 'line_issue' | 'disruption' | 'strike' | 'delay' | 'other';
+
+// En attente → En cours de vérification → Validé / Rejeté → Résolu
+export type ReportStatus = 'pending' | 'reviewing' | 'validated' | 'rejected' | 'resolved';
+
+export type Report = {
+  id: string;
+  type: ReportType;
+  line_id: string | null;
+  line_code: string | null;
+  line_name: string | null;
+  stop_id: string | null;
+  stop_name: string | null;
+  description: string;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy_meters: number | null;
+  status: ReportStatus;
+  review_note: string | null;
+  reviewed_at: string | null;
+  reporter_name: string;
+  reporter_phone: string;
+  created_at: string;
+};

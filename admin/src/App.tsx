@@ -10,6 +10,8 @@ import StopsPage from './pages/StopsPage';
 import UsersPage from './pages/UsersPage';
 import ContributionsPage from './pages/ContributionsPage';
 import ContributionDetailPage from './pages/ContributionDetailPage';
+import ReportsPage from './pages/ReportsPage';
+import ReportDetailPage from './pages/ReportDetailPage';
 
 function Gate() {
   const { access } = useAuth();
@@ -32,6 +34,8 @@ function Gate() {
         <Route path="utilisateurs" element={<UsersPage />} />
         <Route path="contributions" element={<ContributionsPage />} />
         <Route path="contributions/:submissionId" element={<ContributionDetailPage />} />
+        <Route path="signalements" element={<ReportsPage />} />
+        <Route path="signalements/:reportId" element={<ReportDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
