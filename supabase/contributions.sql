@@ -127,7 +127,7 @@ begin
   where submitted_by = auth.uid() and status = 'pending';
 
   if v_pending_count >= 3 then
-    raise exception 'Tu as déjà 3 contributions en attente de validation — attends leur relecture avant d''en envoyer une nouvelle.'
+    raise exception 'Vous avez déjà 3 contributions en attente de validation — attendez leur relecture avant d''en envoyer une nouvelle.'
       using errcode = 'P0001';
   end if;
 
@@ -144,7 +144,7 @@ begin
     where (stop->>'latitude')::double precision not between 12 and 17
        or (stop->>'longitude')::double precision not between -18 and -11
   ) then
-    raise exception 'Un des arrêts marqués est en dehors du Sénégal — vérifie ta position.'
+    raise exception 'Un des arrêts marqués est en dehors du Sénégal — vérifiez votre position.'
       using errcode = 'P0001';
   end if;
 
