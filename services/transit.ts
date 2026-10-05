@@ -94,3 +94,62 @@ export async function getLineSchedules(): Promise<ScheduleRow[]> {
     return (await loadSchedulesCache()) ?? [];
   }
 }
+
+// Tous les arrêts desservis du réseau, avec leurs lignes — ce que la carte
+// d'accueil affiche. Tirés du même appel que le planificateur (et de la même
+// copie hors ligne) : chaque téléphone voit exactement les mêmes arrêts, aux
+// mêmes positions, où qu'il se trouve. Auparavant la carte ne montrait que
+// les arrêts à 3 km de l'utilisateur, si bien que deux appareils à deux
+// endroits différents n'affichaient pas les mêmes arrêts.
+export async function getNetworkStops(): Promise<Stop[]> {
+  const rows = await getRouteGraph();
+  const byId = new Map<string, Stop & { lines: string[]; operator_colors: string[] }>();
+  for (const row of rows) {
+    let stop = byId.get(row.stop_id);
+    if (!stop) {
+      stop = {
+        id: row.stop_id,
+        name: row.stop_name,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        lines: [],
+        operator_colors: [],
+      };
+      byId.set(row.stop_id, stop);
+    }
+    if (!stop.lines.includes(row.line_code)) stop.lines.push(row.line_code);
+    if (!stop.operator_colors.includes(row.operator_color)) stop.operator_colors.push(row.operator_color);
+  }
+  const collator = new Intl.Collator('fr', { numeric: true });
+  for (const stop of byId.values()) stop.lines.sort(collator.compare);
+  return [...byId.values()];
+}
+
+export type NetworkLine = {
+  id: string;
+  code: string;
+  name: string;
+  color: string;
+  operatorShortName: string;
+};
+
+// Toutes les lignes du réseau, de la même source que la carte et le
+// planificateur (et donc disponibles hors ligne).
+export async function getNetworkLines(): Promise<NetworkLine[]> {
+  const rows = await getRouteGraph();
+  const byId = new Map<string, NetworkLine>();
+  for (const row of rows) {
+    if (byId.has(row.line_id)) continue;
+    byId.set(row.line_id, {
+      id: row.line_id,
+      code: row.line_code,
+      name: row.line_name,
+      color: row.line_color ?? row.operator_color,
+      operatorShortName: row.operator_short_name,
+    });
+  }
+  const collator = new Intl.Collator('fr', { numeric: true });
+  return [...byId.values()].sort(
+    (a, b) => collator.compare(a.operatorShortName, b.operatorShortName) || collator.compare(a.code, b.code)
+  );
+}

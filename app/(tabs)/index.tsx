@@ -45,11 +45,10 @@ import {
   TAB_BAR_HEIGHT,
   TAB_BAR_BOTTOM_MARGIN,
 } from '../../constants/theme';
-import { getNearbyStops } from '../../services/transit';
+import { getNetworkStops } from '../../services/transit';
 import { clearLastTrip } from '../../services/offlineCache';
 import { LatLng, Stop, TripSegment } from '../../types/transit';
 import { initialsOf } from '../../utils/text';
-import { distanceKm } from '../../utils/eta';
 
 // Niveau de zoom pendant le guidage : assez serré pour voir la rue suivante.
 const NAVIGATION_ZOOM = 16.5;
@@ -178,14 +177,20 @@ export default function HomeScreen() {
     clearActiveTripRaw();
   }, [clearActiveTripRaw]);
 
-  const loadNearbyStops = useCallback(async (latitude: number, longitude: number) => {
+  // Tout le réseau, chargé une fois (et repris de la copie hors ligne sans
+  // connexion) : les mêmes arrêts sur tous les appareils, où qu'ils soient.
+  const loadStops = useCallback(async () => {
     try {
-      setStops(await getNearbyStops(latitude, longitude, 3000));
+      setStops(await getNetworkStops());
       setStopsError(false);
     } catch {
       setStopsError(true);
     }
   }, []);
+
+  useEffect(() => {
+    loadStops();
+  }, [loadStops]);
 
   // La carte est l'endroit où la demande d'autorisation a du sens : on la
   // déclenche une seule fois, à la première ouverture.
@@ -196,13 +201,6 @@ export default function HomeScreen() {
       request();
     }
   }, [status, request]);
-
-  // Sans position, on montre malgré tout le réseau du centre de Dakar.
-  useEffect(() => {
-    if ((status === 'denied' || status === 'services-off') && stops.length === 0) {
-      loadNearbyStops(DAKAR_REGION.latitude, DAKAR_REGION.longitude);
-    }
-  }, [status, stops.length, loadNearbyStops]);
 
   // Première position reçue : on centre la carte sur l'utilisateur.
   const centeredRef = useRef(false);
@@ -219,20 +217,6 @@ export default function HomeScreen() {
       600
     );
   }, [position, activeTrip]);
-
-  // Arrêts proches : rechargés dès qu'on s'est déplacé de plus de 400 m.
-  const lastLoadRef = useRef<LatLng | null>(null);
-  useEffect(() => {
-    if (!position || activeTrip) return;
-    const last = lastLoadRef.current;
-    const movedKm = last
-      ? distanceKm(last.latitude, last.longitude, position.latitude, position.longitude)
-      : Infinity;
-    if (movedKm > 0.4) {
-      lastLoadRef.current = { latitude: position.latitude, longitude: position.longitude };
-      loadNearbyStops(position.latitude, position.longitude);
-    }
-  }, [position, activeTrip, loadNearbyStops]);
 
   // Pendant le guidage, l'écran ne doit pas se verrouiller : une fois éteint,
   // l'app est suspendue et le guide cesserait de suivre l'utilisateur.
