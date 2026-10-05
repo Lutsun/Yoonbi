@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import EmptyState from '../../components/ui/EmptyState';
@@ -14,6 +14,7 @@ import { Line, Stop } from '../../types/transit';
 export default function BusDetailsScreen() {
   const c = useColors();
   const styles = useMemo(() => createStyles(c), [c]);
+  const router = useRouter();
   const { lineId, code, name, color } = useLocalSearchParams<{
     lineId: string;
     code: string;
@@ -101,6 +102,16 @@ export default function BusDetailsScreen() {
           keyExtractor={(s) => s.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={styles.report}
+              onPress={() => router.push({ pathname: '/(modals)/report-problem', params: { lineId } })}
+              accessibilityRole="button"
+            >
+              <Ionicons name="megaphone-outline" size={16} color={c.inkMuted} />
+              <Text style={styles.reportText}>Signaler un problème sur cette ligne</Text>
+            </TouchableOpacity>
+          }
           renderItem={({ item, index }) => {
             const isFirst = index === 0;
             const isLast = index === stops.length - 1;
@@ -190,4 +201,17 @@ const createStyles = (c: Palette) =>
     paddingVertical: Spacing.md,
   },
   stopNameTerminus: { fontFamily: Fonts.bodySemi, color: c.ink },
+
+  report: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: c.line,
+  },
+  reportText: { fontFamily: Fonts.bodyMedium, fontSize: 13, color: c.inkMuted },
 });

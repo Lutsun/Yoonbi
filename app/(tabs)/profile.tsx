@@ -186,6 +186,24 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.card}>
+          <Row
+            styles={styles}
+            colors={c}
+            icon="megaphone-outline"
+            label="Signaler un problème"
+            onPress={() => router.push('/(modals)/report-problem')}
+          />
+          <View style={styles.separator} />
+          <Row
+            styles={styles}
+            colors={c}
+            icon="document-text-outline"
+            label="Mes signalements"
+            onPress={() => router.push('/(modals)/my-reports')}
+          />
+        </View>
+
+        <View style={styles.card}>
           <Row styles={styles} colors={c} icon="log-out-outline" label="Se déconnecter" danger onPress={handleLogout} />
         </View>
 
