@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import ScreenHeader from '../../components/ui/ScreenHeader';
@@ -19,6 +19,8 @@ import { Fonts, Radii, Spacing, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
 import { getNearbyStops, searchStops } from '../../services/transit';
 import { searchPlaces } from '../../services/places';
+import { searchMapPlaces } from '../../services/mapPlaces';
+import { searchKey } from '../../utils/text';
 import { planJourney } from '../../services/journey';
 import { useUserLocation } from '../../store/LocationContext';
 import { useTrip } from '../../store/TripContext';
@@ -52,6 +54,8 @@ const PLACE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   sport: 'football',
   food: 'restaurant',
   hotel: 'bed',
+  sight: 'camera',
+  shopping: 'bag-handle',
 };
 
 function placeIcon(category?: string): keyof typeof Ionicons.glyphMap {
@@ -94,12 +98,33 @@ export default function ItineraryScreen() {
   const c = useColors();
   const styles = useMemo(() => createStyles(c), [c]);
   const { setPendingTrip } = useTrip();
+  // Ouvert depuis un lieu de la carte (« Y aller ») : destination déjà choisie.
+  const params = useLocalSearchParams<{
+    destId?: string;
+    destName?: string;
+    destLat?: string;
+    destLng?: string;
+    destCategory?: string;
+    destSubtitle?: string;
+  }>();
 
   const [origin, setOrigin] = useState<Stop | null>(null);
-  const [destination, setDestination] = useState<Stop | null>(null);
+  const [destination, setDestination] = useState<Stop | null>(() =>
+    params.destId && params.destName && params.destLat && params.destLng
+      ? {
+          id: params.destId,
+          name: params.destName,
+          latitude: Number(params.destLat),
+          longitude: Number(params.destLng),
+          category: params.destCategory,
+          subtitle: params.destSubtitle,
+          isPlace: true,
+        }
+      : null
+  );
   const [originText, setOriginText] = useState('');
-  const [destinationText, setDestinationText] = useState('');
-  const [activeField, setActiveField] = useState<Field | null>('destination');
+  const [destinationText, setDestinationText] = useState(params.destName ?? '');
+  const [activeField, setActiveField] = useState<Field | null>(params.destId ? null : 'destination');
   const [results, setResults] = useState<Stop[]>([]);
   const [suggestions, setSuggestions] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,10 +153,17 @@ export default function ItineraryScreen() {
     // impose une requête par seconde au plus, d'où l'anti-rebond plus long.
     const withPlaces = activeField === 'destination';
     debounceRef.current = setTimeout(() => {
+      // Les lieux de la carte (restaurants, monuments…) d'abord : instantanés
+      // et hors ligne ; Nominatim complète avec le reste du Sénégal.
+      const local = withPlaces ? searchMapPlaces(text, 5) : [];
       Promise.all([
         searchStops(text).catch(() => [] as Stop[]),
         withPlaces ? searchPlaces(text).catch(() => [] as Stop[]) : Promise.resolve([] as Stop[]),
-      ]).then(([stopsFound, placesFound]) => setResults([...stopsFound.slice(0, 4), ...placesFound]));
+      ]).then(([stopsFound, placesFound]) => {
+        const known = new Set(local.map((p) => searchKey(p.name)));
+        const others = placesFound.filter((p) => !known.has(searchKey(p.name)));
+        setResults([...stopsFound.slice(0, 4), ...local, ...others].slice(0, 12));
+      });
     }, 450);
     return () => clearTimeout(debounceRef.current);
   }, [activeField, originText, destinationText]);
