@@ -34,18 +34,18 @@ export const PLACE_CATEGORIES: Record<
   // `minZoomDelta` : le lieu n'apparaît qu'une fois la carte assez zoomée
   // (latitudeDelta en dessous de cette valeur) — sinon, des centaines de
   // restaurants recouvriraient tout Dakar.
-  sight: { label: 'Monument, site', icon: 'camera', color: '#C2255C', minZoomDelta: 0.25 },
-  townhall: { label: 'Mairie', icon: 'business', color: '#495057', minZoomDelta: 0.08 },
-  hospital: { label: 'Hôpital, clinique', icon: 'medkit', color: '#E03131', minZoomDelta: 0.08 },
-  station: { label: 'Gare, embarcadère', icon: 'boat', color: '#495057', minZoomDelta: 0.08 },
-  market: { label: 'Marché', icon: 'basket', color: '#B07B00', minZoomDelta: 0.08 },
-  shopping: { label: 'Centre commercial', icon: 'bag-handle', color: '#7048E8', minZoomDelta: 0.08 },
-  school: { label: 'Université, école', icon: 'school', color: '#1971C2', minZoomDelta: 0.06 },
-  sport: { label: 'Stade', icon: 'football', color: '#2F9E44', minZoomDelta: 0.08 },
-  hotel: { label: 'Hôtel', icon: 'bed', color: '#7048E8', minZoomDelta: 0.04 },
-  police: { label: 'Police', icon: 'shield', color: '#364FC7', minZoomDelta: 0.03 },
-  food: { label: 'Restaurant', icon: 'restaurant', color: '#E8590C', minZoomDelta: 0.025 },
-  pharmacy: { label: 'Pharmacie', icon: 'medical', color: '#2F9E44', minZoomDelta: 0.025 },
+  sight: { label: 'Monument, site', icon: 'camera', color: '#C2255C', minZoomDelta: 0.06 },
+  townhall: { label: 'Mairie', icon: 'business', color: '#495057', minZoomDelta: 0.03 },
+  hospital: { label: 'Hôpital, clinique', icon: 'medkit', color: '#E03131', minZoomDelta: 0.03 },
+  station: { label: 'Gare, embarcadère', icon: 'boat', color: '#495057', minZoomDelta: 0.03 },
+  market: { label: 'Marché', icon: 'basket', color: '#B07B00', minZoomDelta: 0.03 },
+  shopping: { label: 'Centre commercial', icon: 'bag-handle', color: '#7048E8', minZoomDelta: 0.02 },
+  school: { label: 'Université, école', icon: 'school', color: '#1971C2', minZoomDelta: 0.02 },
+  sport: { label: 'Stade', icon: 'football', color: '#2F9E44', minZoomDelta: 0.03 },
+  hotel: { label: 'Hôtel', icon: 'bed', color: '#7048E8', minZoomDelta: 0.015 },
+  police: { label: 'Police', icon: 'shield', color: '#364FC7', minZoomDelta: 0.012 },
+  food: { label: 'Restaurant', icon: 'restaurant', color: '#E8590C', minZoomDelta: 0.01 },
+  pharmacy: { label: 'Pharmacie', icon: 'medical', color: '#2F9E44', minZoomDelta: 0.01 },
 };
 
 // Ordre d'importance quand il faut se limiter : les repères avant les commerces.
@@ -80,10 +80,13 @@ const KEYS = ALL.map((p) => searchKey(p.name));
 
 export type Region = { latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number };
 
-const MAX_VISIBLE = 70;
+// Les arrêts restent l'information principale : peu de lieux à la fois, et
+// jamais un lieu collé à un arrêt (il le masquerait).
+const MAX_VISIBLE = 30;
+const STOP_CLEARANCE_M = 70;
 
 /** Les lieux à afficher dans la portion de carte visible, selon le zoom. */
-export function placesInRegion(region: Region): MapPlace[] {
+export function placesInRegion(region: Region, stops: { latitude: number; longitude: number }[] = []): MapPlace[] {
   const latMin = region.latitude - region.latitudeDelta / 2;
   const latMax = region.latitude + region.latitudeDelta / 2;
   const lngMin = region.longitude - region.longitudeDelta / 2;
@@ -94,7 +97,12 @@ export function placesInRegion(region: Region): MapPlace[] {
       p.latitude >= latMin &&
       p.latitude <= latMax &&
       p.longitude >= lngMin &&
-      p.longitude <= lngMax
+      p.longitude <= lngMax &&
+      !stops.some(
+        (st) =>
+          Math.abs(st.latitude - p.latitude) * 111_320 < STOP_CLEARANCE_M &&
+          Math.abs(st.longitude - p.longitude) * 107_700 < STOP_CLEARANCE_M
+      )
   );
   if (visible.length <= MAX_VISIBLE) return visible;
   return visible

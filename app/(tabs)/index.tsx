@@ -150,7 +150,7 @@ export default function HomeScreen() {
   // Portion de carte visible : décide quels lieux (restaurants, mairies…)
   // afficher, selon le zoom.
   const [region, setRegion] = useState<Region>(DAKAR_REGION);
-  const places = useMemo(() => placesInRegion(region), [region]);
+  const places = useMemo(() => placesInRegion(region, stops), [region, stops]);
   const [stopsError, setStopsError] = useState(false);
   // Le détail étape par étape reste replié par défaut pendant le guidage :
   // la carte doit rester l'élément principal à l'écran, pas la liste.
@@ -543,9 +543,10 @@ export default function HomeScreen() {
       >
         {!activeTrip &&
           stops.map((stop) => (
-            <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }}>
+            // Les arrêts passent toujours au-dessus des lieux.
+            <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} zIndex={10}>
               <View style={[styles.pin, { backgroundColor: stop.operator_colors?.[0] ?? c.yonn }]}>
-                <Ionicons name="bus" size={13} color="#FFFFFF" />
+                <Ionicons name="bus" size={16} color="#FFFFFF" />
               </View>
               <Callout tooltip={false}>
                 <View style={styles.callout}>
@@ -564,9 +565,9 @@ export default function HomeScreen() {
           places.map((place) => {
             const meta = PLACE_CATEGORIES[place.category];
             return (
-              <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }}>
-                <View style={[styles.placePin, { borderColor: meta.color }]}>
-                  <Ionicons name={meta.icon} size={12} color={meta.color} />
+              <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }} zIndex={1}>
+                <View style={styles.placePin}>
+                  <Ionicons name={meta.icon} size={10} color={meta.color} />
                 </View>
                 <Callout onPress={() => goToPlace(place)}>
                   <View style={styles.callout}>
@@ -1087,10 +1088,11 @@ const createStyles = (c: Palette, isDark: boolean) => {
     },
     waitingText: { flex: 1, fontFamily: Fonts.bodyMedium, fontSize: 14, color: c.inkMuted },
 
+    // Arrêts : l'élément principal de la carte — plus grands, bien détourés.
     pin: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2.5,
@@ -1130,14 +1132,15 @@ const createStyles = (c: Palette, isDark: boolean) => {
     calloutTitle: { fontFamily: Fonts.bodySemi, fontSize: 13, color: '#101828' },
     calloutLines: { fontFamily: Fonts.body, fontSize: 11, color: '#475467', marginTop: 2 },
     calloutAction: { fontFamily: Fonts.bodySemi, fontSize: 12, color: '#027A48', marginTop: 6 },
+    // Lieux : petits, discrets, en retrait des arrêts (l'essentiel de Yoonbi).
     placePin: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: isDark ? 'rgba(242,244,247,0.85)' : 'rgba(255,255,255,0.9)',
+      opacity: 0.85,
     },
 
     locateButton: {
