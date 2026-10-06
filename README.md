@@ -22,6 +22,8 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
   - recalcul automatique : chemin à pied refait en cas d'écart, trajet entier refait si le bus part ailleurs ou si l'arrêt de descente est manqué ; un simple détour du bus ne déclenche rien, le guidage reprend dès qu'il retrouve son trajet
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
 - **Horaires et fréquence par ligne** — amplitude horaire et fréquence de passage sur la fiche de chaque ligne, avec la mention « estimation » quand l'exploitant ne publie pas d'horaire précis (voir `supabase/schema.sql`)
+- **Lieux de Dakar sur la carte** — restaurants, hôtels, hôpitaux, pharmacies, mairies, marchés, universités, monuments et sites (Monument de la Renaissance, musées…), gares : plus de 1 500 lieux issus d'OpenStreetMap, affichés selon le zoom et cherchables hors ligne. Un appui sur un lieu puis « Y aller » ouvre l'itinéraire (voir `services/mapPlaces.ts`, généré par `scripts/build_places.py`)
+- **Prix réels** — BRT au tarif zonal officiel (400 F dans une zone, 500 F au-delà) ; Dakar Dem Dikk et Tata AFTU estimés selon la distance dans leurs fourchettes publiées, affichés avec « ≈ » ; chaque correspondance ajoute son ticket (voir `services/fares.ts`)
 - **Signalements** — depuis le profil (ou la fiche d'une ligne), l'usager signale un problème : arrêt incorrect, problème de ligne, perturbation, grève, retard… avec la ligne et l'arrêt concernés (facultatifs) et sa position. Il suit le statut dans « Mes signalements » ; l'administrateur les examine dans la console (En attente → En cours de vérification → Validé / Rejeté → Résolu). Un signalement validé devient une information fiable, stockée à part (`network_incidents`) pour servir plus tard aux perturbations et au calcul des itinéraires (voir `supabase/reports.sql`)
 - **Cache hors-ligne du réseau et du dernier trajet** — le réseau (lignes et arrêts) reste utilisable sans connexion, et un guidage interrompu par une coupure réseau peut être repris au relancement de l'app (voir `services/offlineCache.ts`)
 
@@ -47,6 +49,8 @@ constants/theme.ts       Couleurs, typographies, espacements — le design syste
 services/                Accès aux données (auth, transport, client Supabase), planificateur d'itinéraire, guidage
 scripts/
   build_line_shapes.py    Génère supabase/line_shapes.sql depuis OpenStreetMap (tracés réels des lignes)
+  build_places.py         Génère data/places.json : les lieux affichés sur la carte (OpenStreetMap, ODbL)
+data/places.json         Lieux de Dakar embarqués dans l'app (utilisables hors ligne)
 store/                  État global (session utilisateur)
 types/                  Types TypeScript partagés
 utils/                  Fonctions utilitaires (validation de numéro, ...)
