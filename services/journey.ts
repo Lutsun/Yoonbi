@@ -6,8 +6,10 @@ import {
   planTripOptions,
   RouteGraph,
   USER_POSITION_ID,
+  walkMinutesForKm,
   withEgressWalk,
 } from './routing';
+import { distanceKm } from '../utils/eta';
 import { formatServiceStart, isRunning, nextServiceStart, parseServiceWindow, ServiceWindow } from './serviceHours';
 import { LatLng, RouteGraphRow, Stop, TripOption, TripPlan } from '../types/transit';
 
@@ -62,11 +64,109 @@ export type JourneyResult =
    */
   | { status: 'no-service'; message: string };
 
-// Arrêts accessibles à pied : d'abord dans un rayon de marche raisonnable,
-// sinon un peu plus loin.
-async function stopsAround(point: LatLng, near: number, far: number): Promise<Stop[]> {
-  const close = await getNearbyStops(point.latitude, point.longitude, near);
-  return close.length > 0 ? close : getNearbyStops(point.latitude, point.longitude, far);
+// --- Marche raisonnable ----------------------------------------------------
+// Arrêts accessibles à pied : d'abord à 10 min de marche, sinon à 20 min. Ce
+// n'est qu'en dernier recours — quartier mal couvert par le réseau Yoonbi —
+// qu'on va jusqu'à 2,5 km, et l'app le dit alors clairement.
+const STOP_RADII_M = [800, 1500, 2500];
+// Destination à moins de 2,5 km (~40 min) : la marche directe est proposée.
+const MAX_DIRECT_WALK_KM = 2.5;
+// Moins de 800 m (~12 min) : marcher est la bonne réponse, pas un bus.
+const ALWAYS_WALK_KM = 0.8;
+// Un bus doit faire gagner au moins ça par rapport à la marche directe, sinon
+// attendre et faire le tour n'a pas de sens.
+const MIN_GAIN_OVER_WALK_MIN = 5;
+// Au-delà, une étape à pied est longue : on le signale.
+const LONG_WALK_KM = 1.2;
+
+async function stopsAround(point: LatLng): Promise<Stop[]> {
+  for (const radius of STOP_RADII_M) {
+    const stops = await getNearbyStops(point.latitude, point.longitude, radius);
+    if (stops.length > 0) return stops;
+  }
+  return [];
+}
+
+function walkKmOf(plan: TripPlan): number[] {
+  return plan.segments
+    .filter((s) => s.type === 'walk')
+    .map((s) => {
+      const a = s.path[0];
+      const b = s.path[s.path.length - 1];
+      return distanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
+    });
+}
+
+function walkOnlyPlan(from: LatLng, fromName: string, destination: Stop): TripPlan {
+  const km = distanceKm(from.latitude, from.longitude, destination.latitude, destination.longitude);
+  const minutes = walkMinutesForKm(km);
+  return {
+    totalMinutes: minutes,
+    totalFareFcfa: 0,
+    totalWalkMinutes: minutes,
+    segments: [
+      {
+        type: 'walk',
+        fromStopId: USER_POSITION_ID,
+        fromStopName: fromName,
+        toStopId: destination.id,
+        toStopName: destination.name,
+        minutes,
+        path: [
+          { latitude: from.latitude, longitude: from.longitude },
+          { latitude: destination.latitude, longitude: destination.longitude },
+        ],
+      },
+    ],
+  };
+}
+
+function addWarning(option: TripOption, warning: string): TripOption {
+  return { ...option, warning: option.warning ? `${option.warning} · ${warning}` : warning };
+}
+
+/**
+ * Rend les options logiques, comme le ferait quelqu'un qui connaît Dakar :
+ * - destination proche → on y va à pied, pas en faisant le tour en bus ;
+ * - un bus qui ne fait pas gagner de temps sur la marche est écarté ;
+ * - une longue marche jusqu'à l'arrêt est signalée, jamais cachée.
+ */
+function sensibleOptions(options: TripOption[], from: LatLng, fromName: string, destination: Stop): TripOption[] {
+  const directKm = distanceKm(from.latitude, from.longitude, destination.latitude, destination.longitude);
+  const walk = directKm <= MAX_DIRECT_WALK_KM ? walkOnlyPlan(from, fromName, destination) : null;
+
+  let buses = options.filter((o) => o.plan.segments.some((s) => s.type === 'ride'));
+  if (walk) {
+    buses = buses.filter(
+      (o) =>
+        o.plan.totalMinutes <= walk.totalMinutes - MIN_GAIN_OVER_WALK_MIN &&
+        o.plan.totalWalkMinutes < walk.totalMinutes
+    );
+  }
+  // Une alternative plus lente ET plus chère que la meilleure n'est pas un
+  // vrai choix (3 bus pour arriver après le bus direct) : on ne la montre pas.
+  const best = buses[0];
+  if (best) {
+    buses = buses.filter(
+      (o, i) =>
+        i === 0 ||
+        o.plan.totalMinutes < best.plan.totalMinutes ||
+        o.plan.totalFareFcfa < best.plan.totalFareFcfa
+    );
+  }
+  buses = buses.map((o) => {
+    const longest = Math.max(0, ...walkKmOf(o.plan));
+    return longest > LONG_WALK_KM
+      ? addWarning(o, `${walkMinutesForKm(longest)} min de marche sur une étape — ce secteur est encore mal desservi dans Yoonbi`)
+      : o;
+  });
+
+  let ordered: TripOption[];
+  if (!walk) ordered = buses.slice(0, 2);
+  else if (directKm <= ALWAYS_WALK_KM || buses.length === 0) ordered = [{ plan: walk, recommended: true }, ...buses.slice(0, 1)];
+  else ordered = [...buses.slice(0, 1), { plan: walk, recommended: false }];
+
+  return ordered.map((o, i) => ({ ...o, recommended: i === 0 }));
 }
 
 async function optionsOn(
@@ -78,9 +178,9 @@ async function optionsOn(
   if (destination.isPlace) {
     // Un lieu n'est pas un arrêt : on vise les arrêts les plus proches de lui,
     // puis on ajoute la marche finale jusqu'à sa porte.
-    const exits = await stopsAround(destination, 1000, 2500);
+    const exits = await stopsAround(destination);
     if (exits.length === 0) return [];
-    const starts = position ? await stopsAround(position, 1200, 3000) : [];
+    const starts = position ? await stopsAround(position) : [];
 
     const plans: TripPlan[] = [];
     for (const exit of exits.slice(0, 3)) {
@@ -97,7 +197,7 @@ async function optionsOn(
 
   if (position) {
     // Départ réel : on compare plusieurs arrêts accessibles à pied.
-    const starts = await stopsAround(position, 1200, 3000);
+    const starts = await stopsAround(position);
     return planFromPosition(graph, position, starts, destination.id);
   }
 
@@ -177,8 +277,14 @@ export async function planJourney(
     if (!schedule.estimated && !isRunning(schedule.window, at)) closed.add(lineId);
   }
 
-  const options = await optionsOn(graphWithout(net, closed), origin, position, destination);
-  if (options === 'same-stop') return { status: 'same-stop' };
+  const found = await optionsOn(graphWithout(net, closed), origin, position, destination);
+  if (found === 'same-stop') return { status: 'same-stop' };
+  const options = sensibleOptions(
+    found.map((o) => withServiceWarning(o, net, at)),
+    position ?? origin,
+    origin.name,
+    destination
+  );
 
   if (options.length === 0) {
     if (closed.size === 0) return { status: 'no-path' };
@@ -189,7 +295,7 @@ export async function planJourney(
     return { status: 'no-service', message: noServiceMessage(anytime, net, closed, at) };
   }
 
-  return { status: 'ok', origin, options: preferReliable(options.map((o) => withServiceWarning(o, net, at))) };
+  return { status: 'ok', origin, options: preferReliable(options) };
 }
 
 // Un bus qui ne passe peut-être plus ne doit pas être recommandé s'il ne fait
