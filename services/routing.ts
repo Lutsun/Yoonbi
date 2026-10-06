@@ -14,6 +14,7 @@
 //  - chaque ligne dessert ses arrêts dans les deux sens
 
 import { distanceKm } from '../utils/eta';
+import { rideFare } from './fares';
 import {
   LatLng,
   RouteGraphRow,
@@ -31,6 +32,15 @@ import {
 const BRT_SPEED_KMH = 24;
 const BUS_SPEED_KMH = 12;
 const WALK_SPEED_KMH = 4.5;
+// À pied, on ne marche jamais en ligne droite : les rues, les carrefours et
+// les blocs ajoutent en moyenne 30 % à la distance à vol d'oiseau. Sans ce
+// facteur, une marche de 1 km annoncée 13 min en prenait 17 en réalité — et
+// rendait des détours à pied artificiellement intéressants.
+const WALK_DETOUR = 1.3;
+
+export function walkMinutesForKm(straightKm: number): number {
+  return Math.max(1, Math.round(((straightKm * WALK_DETOUR) / WALK_SPEED_KMH) * 60));
+}
 // Attente moyenne à l'arrêt : la moitié de l'intervalle entre deux bus. Le BRT
 // passe toutes les 6 min (sunubrt.sn) ; pour les autres réseaux, sans horaire
 // publié, on retient une hypothèse de 6 min.
@@ -168,7 +178,7 @@ export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
       const b = stopList[j];
       const km = distanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
       if (km <= WALK_TRANSFER_RADIUS_KM) {
-        const minutes = Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60));
+        const minutes = walkMinutesForKm(km);
         addEdge(walkEdges, a.id, { kind: 'walk', toStopId: b.id, minutes });
         addEdge(walkEdges, b.id, { kind: 'walk', toStopId: a.id, minutes });
       }
@@ -293,6 +303,15 @@ function headsignOf(graph: RouteGraph, lineId: string, fromStopId: string, toSto
   return graph.stops.get(terminusId)?.name;
 }
 
+// Distance parcourue le long d'une suite de points (d'arrêt en arrêt), en km.
+function pathLengthKm(path: LatLng[]): number {
+  let km = 0;
+  for (let i = 1; i < path.length; i++) {
+    km += distanceKm(path[i - 1].latitude, path[i - 1].longitude, path[i].latitude, path[i].longitude);
+  }
+  return km;
+}
+
 function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
   const segments: TripSegment[] = [];
 
@@ -352,6 +371,17 @@ function segmentsFromPath(graph: RouteGraph, path: PathEdge[]): TripSegment[] {
     segment.minutes = Math.max(1, Math.round(segment.minutes));
     if (segment.type === 'ride') {
       segment.headsign = headsignOf(graph, segment.lineId, segment.boardStopId, segment.alightStopId);
+      // Prix réel du ticket pour CE trajet (zones du BRT, distance pour DDD
+      // et AFTU) — voir services/fares.ts.
+      const fare = rideFare({
+        operatorShortName: segment.operatorShortName,
+        boardStopName: segment.boardStopName,
+        alightStopName: segment.alightStopName,
+        rideKm: pathLengthKm(segment.path),
+        lineFareFcfa: segment.fareFcfa,
+      });
+      segment.fareFcfa = fare.fareFcfa;
+      segment.fareEstimated = fare.estimated;
     }
   }
 
@@ -379,8 +409,9 @@ export function planTrip(
   const totalWalkMinutes = segments
     .filter((s): s is Extract<TripSegment, { type: 'walk' }> => s.type === 'walk')
     .reduce((sum, s) => sum + s.minutes, 0);
+  const fareEstimated = segments.some((s) => s.type === 'ride' && s.fareEstimated);
 
-  return { totalMinutes, totalFareFcfa, totalWalkMinutes, segments };
+  return { totalMinutes, totalFareFcfa, fareEstimated, totalWalkMinutes, segments };
 }
 
 // Ajoute la marche réelle depuis la position GPS de l'utilisateur jusqu'à
@@ -403,7 +434,7 @@ function mergeConsecutiveWalks(plan: TripPlan): TripPlan {
         ...previous,
         toStopId: segment.toStopId,
         toStopName: segment.toStopName,
-        minutes: Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60)),
+        minutes: walkMinutesForKm(km),
         path: [from, to],
       };
     } else {
@@ -427,7 +458,7 @@ export function withAccessWalk(plan: TripPlan, from: LatLng, boardingStop: Stop)
   const km = distanceKm(from.latitude, from.longitude, boardingStop.latitude, boardingStop.longitude);
   if (km < MIN_ACCESS_WALK_KM) return plan;
 
-  const minutes = Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60));
+  const minutes = walkMinutesForKm(km);
   const walk: TripSegment = {
     type: 'walk',
     fromStopId: USER_POSITION_ID,
@@ -455,7 +486,7 @@ export function withEgressWalk(plan: TripPlan, alightStop: Stop, place: LatLng &
   const km = distanceKm(alightStop.latitude, alightStop.longitude, place.latitude, place.longitude);
   if (km < MIN_ACCESS_WALK_KM) return plan;
 
-  const minutes = Math.max(1, Math.round((km / WALK_SPEED_KMH) * 60));
+  const minutes = walkMinutesForKm(km);
   const walk: TripSegment = {
     type: 'walk',
     fromStopId: alightStop.id,

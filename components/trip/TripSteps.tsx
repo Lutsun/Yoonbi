@@ -88,7 +88,7 @@ export default function TripSteps({ origin, destination, segments, activeIndex =
             }
             meta={
               isRide
-                ? `${segment.operatorShortName} · ${segment.minutes} min · ${segment.stopsCount} arrêt${
+                ? `${segment.operatorShortName} · ${segment.fareEstimated ? '≈ ' : ''}${segment.fareFcfa} F · ${segment.minutes} min · ${segment.stopsCount} arrêt${
                     segment.stopsCount > 1 ? 's' : ''
                   }`
                 : `${segment.minutes} min à pied`

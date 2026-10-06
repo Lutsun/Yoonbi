@@ -94,6 +94,8 @@ export type RideSegment = {
   lineColor: string;
   operatorShortName: string;
   fareFcfa: number;
+  /** Vrai quand le prix est une estimation (DDD, AFTU : pas de grille publiée par arrêt). */
+  fareEstimated?: boolean;
   boardStopId: string;
   boardStopName: string;
   alightStopId: string;
@@ -124,6 +126,8 @@ export type TripSegment = RideSegment | WalkSegment;
 export type TripPlan = {
   totalMinutes: number;
   totalFareFcfa: number;
+  /** Vrai si au moins un des tickets du trajet est un prix estimé. */
+  fareEstimated?: boolean;
   totalWalkMinutes: number;
   segments: TripSegment[];
 };

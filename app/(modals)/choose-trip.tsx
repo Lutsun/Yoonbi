@@ -101,7 +101,7 @@ function OptionCard({
           </View>
         )}
         <View style={{ flex: 1 }} />
-        <Text style={styles.fare}>{formatFare(plan.totalFareFcfa)}</Text>
+        <Text style={styles.fare}>{formatFare(plan.totalFareFcfa, 'FCFA', plan.fareEstimated)}</Text>
       </View>
 
       {/* Enchaînement des lignes : ce qu'on prend, dans l'ordre. */}

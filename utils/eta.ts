@@ -32,6 +32,8 @@ export function formatDistance(km: number): string {
 // Un trajet à 0 FCFA n'est pas une donnée manquante : c'est un itinéraire
 // entièrement à pied (pas de bus pris). « 0 FCFA » tout seul ressemble à
 // une erreur ; on le dit explicitement pour que ce soit rassurant.
-export function formatFare(totalFareFcfa: number, unit: 'FCFA' | 'F' = 'FCFA'): string {
-  return totalFareFcfa > 0 ? `${totalFareFcfa} ${unit}` : 'Gratuit (à pied)';
+// `estimated` : le prix est une estimation (DDD, AFTU — voir services/fares.ts),
+// annoncée par « ≈ » pour ne jamais présenter un prix approché comme exact.
+export function formatFare(totalFareFcfa: number, unit: 'FCFA' | 'F' = 'FCFA', estimated = false): string {
+  return totalFareFcfa > 0 ? `${estimated ? '≈ ' : ''}${totalFareFcfa} ${unit}` : 'Gratuit (à pied)';
 }

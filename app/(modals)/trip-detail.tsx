@@ -94,7 +94,7 @@ export default function TripDetailScreen() {
           <View style={styles.statDivider} />
           <Stat
             styles={styles}
-            value={plan.totalFareFcfa > 0 ? `${plan.totalFareFcfa}` : 'Gratuit'}
+            value={plan.totalFareFcfa > 0 ? `${plan.fareEstimated ? '≈ ' : ''}${plan.totalFareFcfa}` : 'Gratuit'}
             unit={plan.totalFareFcfa > 0 ? 'FCFA' : '(à pied)'}
             label="prix"
             color={c.yonnDark}
