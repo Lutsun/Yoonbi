@@ -118,7 +118,9 @@ export async function getNetworkStops(): Promise<Stop[]> {
       byId.set(row.stop_id, stop);
     }
     if (!stop.lines.includes(row.line_code)) stop.lines.push(row.line_code);
-    if (!stop.operator_colors.includes(row.operator_color)) stop.operator_colors.push(row.operator_color);
+    // Même couleur que la ligne partout ailleurs (carte, trajets, onglet Lignes).
+    const color = row.line_color || row.operator_color;
+    if (!stop.operator_colors.includes(color)) stop.operator_colors.push(color);
   }
   const collator = new Intl.Collator('fr', { numeric: true });
   for (const stop of byId.values()) stop.lines.sort(collator.compare);

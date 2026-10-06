@@ -46,19 +46,20 @@ import {
   TAB_BAR_BOTTOM_MARGIN,
 } from '../../constants/theme';
 import { getNetworkStops } from '../../services/transit';
+import { MapPlace, PLACE_CATEGORIES, placesInRegion } from '../../services/mapPlaces';
 import { clearLastTrip } from '../../services/offlineCache';
 import { LatLng, Stop, TripSegment } from '../../types/transit';
 import { initialsOf } from '../../utils/text';
 
 // Niveau de zoom pendant le guidage : assez serré pour voir la rue suivante.
 const NAVIGATION_ZOOM = 16.5;
-const BROWSING_ZOOM = 15;
+// Hors guidage : zone visible autour de l'utilisateur (≈ 1,5 km de côté).
+const BROWSING_DELTA = 0.015;
 // Apple Plans (iOS) ignore `zoom` et ne connaît que l'altitude de la caméra,
 // en mètres : sans elle, le guidage restait sur la vue d'ensemble du trajet
 // au lieu de zoomer sur l'utilisateur. Équivalents approximatifs des zooms
 // ci-dessus ; chaque plateforme ignore la valeur qui ne la concerne pas.
 const NAVIGATION_ALTITUDE = 700;
-const BROWSING_ALTITUDE = 2500;
 const KEEP_AWAKE_TAG = 'yoonbi-guidance';
 // Distance à laquelle prévenir avant de descendre — le même rayon que la
 // marche de correspondance (voir services/routing.ts). Dès qu'il ne reste
@@ -73,11 +74,13 @@ const REROUTE_COOLDOWN_MS = 30000;
 // Assez clair en mode sombre pour ne pas se confondre avec les routes.
 const TRAVELED_LIGHT = '#B9C0CA';
 const TRAVELED_DARK = '#8A94A3';
-// Marche à venir : en points bleus, distincte des lignes de bus. Des traits
-// courts aux bouts arrondis se rejoignaient en un boudin informe ; un tiret
-// quasi nul arrondi dessine un point rond, espacé régulièrement.
-const WALK_LIGHT = '#2E7CF6';
-const WALK_DARK = '#5B9BFF';
+// Marche à venir : en points, d'une couleur neutre et très contrastée (ardoise
+// sur carte claire, presque blanc sur carte sombre). Jamais en bleu : le bleu
+// est la couleur de Dakar Dem Dikk, et l'on confondait « marcher » avec
+// « prendre un DDD ». Des traits courts aux bouts arrondis se rejoignaient en
+// un boudin informe ; un tiret quasi nul arrondi dessine un point rond.
+const WALK_LIGHT = '#344054';
+const WALK_DARK = '#F2F4F7';
 const WALK_DOTS = [1, 11];
 
 // Tracé minimal (deux fois le même point) d'une couche momentanément vide.
@@ -144,6 +147,10 @@ export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
 
   const [stops, setStops] = useState<Stop[]>([]);
+  // Portion de carte visible : décide quels lieux (restaurants, mairies…)
+  // afficher, selon le zoom.
+  const [region, setRegion] = useState<Region>(DAKAR_REGION);
+  const places = useMemo(() => placesInRegion(region), [region]);
   const [stopsError, setStopsError] = useState(false);
   // Le détail étape par étape reste replié par défaut pendant le guidage :
   // la carte doit rester l'élément principal à l'écran, pas la liste.
@@ -202,21 +209,24 @@ export default function HomeScreen() {
     }
   }, [status, request]);
 
-  // Première position reçue : on centre la carte sur l'utilisateur.
+  // Première position reçue : on centre la carte sur l'utilisateur — une fois
+  // la carte prête, sinon iOS ignore l'animation et la carte reste sur la vue
+  // d'ensemble de Dakar, le point bleu dans un coin.
   const centeredRef = useRef(false);
+  const [mapReady, setMapReady] = useState(false);
   useEffect(() => {
-    if (!position || centeredRef.current || activeTrip) return;
+    if (!mapReady || !position || centeredRef.current || activeTrip) return;
     centeredRef.current = true;
     mapRef.current?.animateToRegion(
       {
         latitude: position.latitude,
         longitude: position.longitude,
-        latitudeDelta: 0.015,
-        longitudeDelta: 0.015,
+        latitudeDelta: BROWSING_DELTA,
+        longitudeDelta: BROWSING_DELTA,
       },
       600
     );
-  }, [position, activeTrip]);
+  }, [mapReady, position, activeTrip]);
 
   // Pendant le guidage, l'écran ne doit pas se verrouiller : une fois éteint,
   // l'app est suspendue et le guide cesserait de suivre l'utilisateur.
@@ -447,19 +457,43 @@ export default function HomeScreen() {
     );
   }, [position, following, activeTrip]);
 
+  // « Y aller » depuis un lieu de la carte : l'itinéraire s'ouvre avec ce
+  // lieu déjà choisi comme destination, le départ étant la position actuelle.
+  const goToPlace = (place: MapPlace) => {
+    router.push({
+      pathname: '/(modals)/itinerary',
+      params: {
+        destId: place.id,
+        destName: place.name,
+        destLat: String(place.latitude),
+        destLng: String(place.longitude),
+        destCategory: place.category,
+        destSubtitle: place.subtitle ?? '',
+      },
+    });
+  };
+
   const recenter = () => {
     if (!position) {
       request();
       return;
     }
-    if (activeTrip) setFollowing(true);
-    mapRef.current?.animateCamera(
+    if (activeTrip) {
+      // En guidage, la caméra de suivi (plus haut) prend le relais.
+      setFollowing(true);
+      return;
+    }
+    // Hors guidage : une zone d'environ 1,5 km autour de l'utilisateur — de
+    // quoi voir les arrêts et les lieux proches. Par zone plutôt que par
+    // caméra : sur iOS, la caméra combinant zoom et altitude dézoomait.
+    mapRef.current?.animateToRegion(
       {
-        center: { latitude: position.latitude, longitude: position.longitude },
-        zoom: activeTrip ? NAVIGATION_ZOOM : BROWSING_ZOOM,
-        altitude: activeTrip ? NAVIGATION_ALTITUDE : BROWSING_ALTITUDE,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        latitudeDelta: BROWSING_DELTA,
+        longitudeDelta: BROWSING_DELTA,
       },
-      { duration: 500 }
+      500
     );
   };
 
@@ -504,6 +538,8 @@ export default function HomeScreen() {
         // Dès que l'utilisateur déplace la carte, on arrête de la recentrer
         // sous ses doigts — il reprend la main jusqu'à ce qu'il le redemande.
         onPanDrag={() => following && setFollowing(false)}
+        onRegionChangeComplete={setRegion}
+        onMapReady={() => setMapReady(true)}
       >
         {!activeTrip &&
           stops.map((stop) => (
@@ -521,6 +557,27 @@ export default function HomeScreen() {
               </Callout>
             </Marker>
           ))}
+
+        {/* Lieux utiles (OpenStreetMap) : pastille claire et icône colorée,
+            pour ne jamais être confondus avec un arrêt (pastille pleine). */}
+        {!activeTrip &&
+          places.map((place) => {
+            const meta = PLACE_CATEGORIES[place.category];
+            return (
+              <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }}>
+                <View style={[styles.placePin, { borderColor: meta.color }]}>
+                  <Ionicons name={meta.icon} size={12} color={meta.color} />
+                </View>
+                <Callout onPress={() => goToPlace(place)}>
+                  <View style={styles.callout}>
+                    <Text style={styles.calloutTitle}>{place.name}</Text>
+                    <Text style={styles.calloutLines}>{meta.label}</Text>
+                    <Text style={styles.calloutAction}>Y aller ›</Text>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
 
         {activeTrip && (
           <>
@@ -545,8 +602,10 @@ export default function HomeScreen() {
               <Polyline
                 key={`${activeTripId}-casing-${index}`}
                 coordinates={ahead ?? hiddenPath(segment)}
-                strokeColor={ahead && current && segment.type === 'ride' ? '#FFFFFF' : 'transparent'}
-                strokeWidth={13}
+                // Liseré blanc sous chaque bus à venir : une ligne bleu foncé
+                // (DDD) ou orange (AFTU) reste lisible sur toutes les cartes.
+                strokeColor={ahead && segment.type === 'ride' ? '#FFFFFF' : 'transparent'}
+                strokeWidth={current ? 13 : 10}
                 lineCap="round"
                 zIndex={2}
               />
@@ -766,7 +825,7 @@ export default function HomeScreen() {
               styles={styles}
               value={
                 activeTrip.plan.totalFareFcfa > 0
-                  ? `${activeTrip.plan.totalFareFcfa} F`
+                  ? `${activeTrip.plan.fareEstimated ? '≈ ' : ''}${activeTrip.plan.totalFareFcfa} F`
                   : 'Gratuit'
               }
               label="prix"
@@ -1070,6 +1129,16 @@ const createStyles = (c: Palette, isDark: boolean) => {
     callout: { minWidth: 150, padding: Spacing.xs },
     calloutTitle: { fontFamily: Fonts.bodySemi, fontSize: 13, color: '#101828' },
     calloutLines: { fontFamily: Fonts.body, fontSize: 11, color: '#475467', marginTop: 2 },
+    calloutAction: { fontFamily: Fonts.bodySemi, fontSize: 12, color: '#027A48', marginTop: 6 },
+    placePin: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      backgroundColor: '#FFFFFF',
+    },
 
     locateButton: {
       position: 'absolute',
