@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Callout, Polyline, Region } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
@@ -546,7 +546,7 @@ export default function HomeScreen() {
             // Les arrêts passent toujours au-dessus des lieux.
             <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} zIndex={10}>
               <View style={[styles.pin, { backgroundColor: stop.operator_colors?.[0] ?? c.yonn }]}>
-                <Ionicons name="bus" size={16} color="#FFFFFF" />
+                <Ionicons name="bus" size={13} color="#FFFFFF" />
               </View>
               <Callout tooltip={false}>
                 <View style={styles.callout}>
@@ -566,8 +566,8 @@ export default function HomeScreen() {
             const meta = PLACE_CATEGORIES[place.category];
             return (
               <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }} zIndex={1}>
-                <View style={styles.placePin}>
-                  <Ionicons name={meta.icon} size={10} color={meta.color} />
+                <View style={[styles.placePin, { backgroundColor: meta.color }]}>
+                  <MaterialCommunityIcons name={meta.icon} size={12} color="#FFFFFF" />
                 </View>
                 <Callout onPress={() => goToPlace(place)}>
                   <View style={styles.callout}>
@@ -1090,12 +1090,12 @@ const createStyles = (c: Palette, isDark: boolean) => {
 
     // Arrêts : l'élément principal de la carte — plus grands, bien détourés.
     pin: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2.5,
+      borderWidth: 2,
       borderColor: c.surface,
     },
     originPin: {
@@ -1133,14 +1133,17 @@ const createStyles = (c: Palette, isDark: boolean) => {
     calloutLines: { fontFamily: Fonts.body, fontSize: 11, color: '#475467', marginTop: 2 },
     calloutAction: { fontFamily: Fonts.bodySemi, fontSize: 12, color: '#027A48', marginTop: 6 },
     // Lieux : petits, discrets, en retrait des arrêts (l'essentiel de Yoonbi).
+    // Lieux : petite pastille pleine, couleur de la catégorie, un peu
+    // transparente — lisible, mais en retrait des arrêts.
     placePin: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: isDark ? 'rgba(242,244,247,0.85)' : 'rgba(255,255,255,0.9)',
-      opacity: 0.85,
+      borderWidth: 1.5,
+      borderColor: '#FFFFFF',
+      opacity: 0.9,
     },
 
     locateButton: {
