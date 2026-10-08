@@ -44,3 +44,6 @@ Claude outputs/
 # generated native folders
 /ios
 /android
+
+# Version web exportée (npm run build:web)
+dist-web/

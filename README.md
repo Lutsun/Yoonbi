@@ -126,6 +126,15 @@ Configuration Supabase :
 2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, `supabase/fix_plateau_stop_order.sql`, puis `supabase/reports.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
+Version web (navigateur) — la même app, publiée sur Vercel (https://yoonbi-app.vercel.app) :
+
+```bash
+npm run build:web            # exporte l'app dans dist-web/, prête pour Vercel
+cd dist-web && npx vercel deploy --prod
+```
+
+Sur le web, la carte utilise Leaflet et les fonds OpenStreetMap (`components/map/AppMap.web.tsx`), les notifications système sont désactivées, et l'app s'affiche au format téléphone sur un écran d'ordinateur.
+
 ```bash
 # Lancer le serveur de développement
 npx expo start
