@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { AppState, Linking } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 import * as Location from 'expo-location';
 
 // Source unique de la position de l'utilisateur, partagée par la carte et le
@@ -155,7 +155,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       await evaluate();
       return;
     }
-    // Refus définitif : iOS ne réaffiche jamais la boîte de dialogue.
+    // Refus définitif : iOS ne réaffiche jamais la boîte de dialogue. Dans un
+    // navigateur, pas de Réglages : on relit simplement l'autorisation, que
+    // l'utilisateur a pu rétablir depuis la barre d'adresse.
+    if (Platform.OS === 'web') {
+      await evaluate();
+      return;
+    }
     await Linking.openSettings();
   }, [evaluate]);
 

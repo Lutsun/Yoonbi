@@ -7,6 +7,7 @@ import { Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { Platform, View } from 'react-native';
 
 import { AuthProvider } from '../store/AuthContext';
 import { TripProvider } from '../store/TripContext';
@@ -54,7 +55,7 @@ function RootNavigator() {
   const { isDark, colors } = useTheme();
 
   return (
-    <>
+    <WebFrame background={isDark ? '#05070B' : '#E4E7EC'}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
@@ -67,6 +68,22 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(modals)" options={{ presentation: 'modal' }} />
       </Stack>
-    </>
+    </WebFrame>
+  );
+}
+
+// Dans un navigateur d'ordinateur, Yoonbi s'affiche au format téléphone, centré
+// — c'est une app mobile, pas un site étiré sur tout l'écran. Sur un vrai
+// téléphone (natif ou navigateur mobile), ce cadre est transparent.
+const WEB_APP_MAX_WIDTH = 480;
+
+function WebFrame({ background, children }: { background: string; children: React.ReactNode }) {
+  if (Platform.OS !== 'web') return <>{children}</>;
+  return (
+    <View style={{ flex: 1, backgroundColor: background, alignItems: 'center' }}>
+      <View style={{ flex: 1, width: '100%', maxWidth: WEB_APP_MAX_WIDTH, overflow: 'hidden' }}>
+        {children}
+      </View>
+    </View>
   );
 }

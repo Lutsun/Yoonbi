@@ -25,7 +25,13 @@
       "package": "com.anonymous.Yoonbi"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "name": "Yoonbi",
+      "shortName": "Yoonbi",
+      "themeColor": "#1DB954",
+      "backgroundColor": "#1DB954",
+      "lang": "fr"
     },
     "plugins": [
       "expo-router",

@@ -6,10 +6,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Platform,
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker, Callout, Polyline, Region } from 'react-native-maps';
+import MapView, { Marker, Callout, Polyline, Region } from '../../components/map/AppMap';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -112,11 +113,20 @@ const LOCATION_BLOCKERS: Partial<
     text: 'Autorisez la localisation pour voir où vous êtes et les arrêts autour de vous.',
     action: 'Autoriser',
   },
-  denied: {
-    icon: 'location-outline',
-    text: 'Yoonbi n’a pas accès à votre position. Activez-la dans les Réglages pour être guidé.',
-    action: 'Ouvrir les Réglages',
-  },
+  // Dans un navigateur, l'autorisation se rétablit depuis l'icône à gauche de
+  // l'adresse du site — il n'y a pas de Réglages à ouvrir.
+  denied:
+    Platform.OS === 'web'
+      ? {
+          icon: 'location-outline',
+          text: 'Yoonbi n’a pas accès à votre position. Autorisez-la depuis l’icône à gauche de l’adresse du site, puis réessayez.',
+          action: 'Réessayer',
+        }
+      : {
+          icon: 'location-outline',
+          text: 'Yoonbi n’a pas accès à votre position. Activez-la dans les Réglages pour être guidé.',
+          action: 'Ouvrir les Réglages',
+        },
   'services-off': {
     icon: 'cellular-outline',
     text: 'La localisation de votre téléphone est coupée. Activez-la dans Réglages › Confidentialité.',
