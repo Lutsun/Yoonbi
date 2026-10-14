@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, Siren, LogOut, Menu, X } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, Siren, LogOut, Menu, X, Bell } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 import { getStats, listReports } from './lib/api';
 
@@ -69,11 +69,18 @@ export default function Layout() {
         <span className="mobile-topbar-title">
           <span style={{ color: 'var(--yonn)' }}>Yoon</span>bi
         </span>
-        {pendingCount + pendingReports > 0 && (
-          <span className="sidebar-link-badge" style={{ marginLeft: 'auto' }}>
-            {pendingCount + pendingReports}
-          </span>
-        )}
+        {/* Cloche : ce qui attend une décision. Mène aux signalements s'il y en
+            a en attente, sinon aux contributions. */}
+        <Link
+          to={pendingReports > 0 || pendingCount === 0 ? '/signalements' : '/contributions'}
+          className="notif-bell"
+          aria-label={`${pendingCount + pendingReports} élément(s) en attente`}
+        >
+          <Bell size={20} />
+          {pendingCount + pendingReports > 0 && (
+            <span className="notif-bell-count">{Math.min(99, pendingCount + pendingReports)}</span>
+          )}
+        </Link>
       </header>
       {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
       <aside className={'sidebar' + (menuOpen ? ' open' : '')}>
