@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, Siren, LogOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Bus, GitBranch, MapPin, Users, Inbox, Siren, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 import { getStats, listReports } from './lib/api';
 
@@ -19,6 +19,36 @@ export default function Layout() {
   const initial = email?.trim().charAt(0).toUpperCase() || '?';
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingReports, setPendingReports] = useState(0);
+  // Sur téléphone, le menu latéral devient un tiroir qu'on ouvre d'un bouton.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  // Sur téléphone, chaque ligne de tableau s'affiche en carte : chaque cellule
+  // reprend le titre de sa colonne (data-label, lu par le CSS). Fait ici une
+  // fois pour toutes les pages, plutôt que dans chaque tableau.
+  useEffect(() => {
+    const root = mainRef.current;
+    if (!root) return;
+    const label = () => {
+      root.querySelectorAll('table').forEach((table) => {
+        const heads = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent?.trim() ?? '');
+        table.querySelectorAll('tbody tr').forEach((row) => {
+          Array.from(row.children).forEach((cell, i) => {
+            if (heads[i] && cell.getAttribute('data-label') !== heads[i]) cell.setAttribute('data-label', heads[i]);
+          });
+        });
+      });
+    };
+    label();
+    const observer = new MutationObserver(label);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     getStats()
@@ -31,7 +61,25 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <header className="mobile-topbar">
+        <button className="btn btn-icon" onClick={() => setMenuOpen(true)} aria-label="Ouvrir le menu">
+          <Menu size={18} />
+        </button>
+        <span className="sidebar-brand-mark">Y</span>
+        <span className="mobile-topbar-title">
+          <span style={{ color: 'var(--yonn)' }}>Yoon</span>bi
+        </span>
+        {pendingCount + pendingReports > 0 && (
+          <span className="sidebar-link-badge" style={{ marginLeft: 'auto' }}>
+            {pendingCount + pendingReports}
+          </span>
+        )}
+      </header>
+      {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
+      <aside className={'sidebar' + (menuOpen ? ' open' : '')}>
+        <button className="btn btn-icon sidebar-close" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu">
+          <X size={18} />
+        </button>
         <div className="sidebar-brand">
           <span className="sidebar-brand-mark">Y</span>
           <span>
@@ -75,7 +123,7 @@ export default function Layout() {
           </button>
         </div>
       </aside>
-      <main className="main">
+      <main className="main" ref={mainRef}>
         <Outlet />
       </main>
     </div>
