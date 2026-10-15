@@ -44,7 +44,10 @@ const DARK_TILES_CLASS = 'yoonbi-dark-tiles';
 if (typeof document !== 'undefined' && !document.getElementById(DARK_TILES_CLASS)) {
   const style = document.createElement('style');
   style.id = DARK_TILES_CLASS;
-  style.textContent = `.${DARK_TILES_CLASS} .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }`;
+  // Filtre posé sur chaque tuile, pas sur tout le calque : le navigateur ne le
+  // calcule qu'une fois par tuile, au lieu de le recalculer sur tout l'écran à
+  // chaque image pendant un déplacement (saccades sur téléphone).
+  style.textContent = `.${DARK_TILES_CLASS} .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }`;
   document.head.appendChild(style);
 }
 
@@ -187,13 +190,24 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     <View style={style}>
       <MapContainer
         center={[region.latitude, region.longitude]}
-        zoom={zoomForDelta(region.longitudeDelta)}
-        zoomSnap={0}
+        zoom={Math.round(zoomForDelta(region.longitudeDelta))}
+        // Zooms entiers : à un zoom intermédiaire, les tuiles sont étirées
+        // (floues) et redessinées sans cesse. Molette plus douce sur ordinateur.
+        zoomSnap={1}
+        wheelPxPerZoomLevel={90}
         zoomControl={false}
         className={dark ? DARK_TILES_CLASS : undefined}
         style={{ width: '100%', height: '100%', background: dark ? '#0C1017' : '#F2F4F7' }}
       >
-        <TileLayer url={TILES} attribution={ATTRIBUTION} maxZoom={19} />
+        <TileLayer
+          url={TILES}
+          attribution={ATTRIBUTION}
+          maxZoom={19}
+          // Sur téléphone, Leaflet attend par défaut la fin du geste pour
+          // charger les tuiles : on voyait des trous gris en glissant la carte.
+          updateWhenIdle={false}
+          keepBuffer={4}
+        />
         {ROUTE_PANES.map((z) => (
           <Pane key={z} name={`route-${z}`} style={{ zIndex: 400 + z }} />
         ))}
@@ -230,7 +244,9 @@ type MarkerProps = {
   children?: ReactNode;
 };
 
-export function Marker({ coordinate, anchor = { x: 0.5, y: 0.5 }, zIndex = 0, children }: MarkerProps) {
+export const Marker = React.memo(MarkerImpl);
+
+function MarkerImpl({ coordinate, anchor = { x: 0.5, y: 0.5 }, zIndex = 0, children }: MarkerProps) {
   const map = useContext(MapReadyContext);
   const markerRef = useRef<L.Marker | null>(null);
   const [iconEl, setIconEl] = useState<HTMLElement | null>(null);

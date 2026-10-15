@@ -160,7 +160,16 @@ export default function HomeScreen() {
   // Portion de carte visible : décide quels lieux (restaurants, mairies…)
   // afficher, selon le zoom.
   const [region, setRegion] = useState<Region>(DAKAR_REGION);
-  const places = useMemo(() => placesInRegion(region, stops), [region, stops]);
+  const visiblePlaces = useMemo(() => placesInRegion(region, stops), [region, stops]);
+  // Même liste de lieux après un petit déplacement : on garde le même tableau
+  // pour ne pas redessiner leurs marqueurs.
+  const placesRef = useRef<MapPlace[]>([]);
+  const places = useMemo(() => {
+    const prev = placesRef.current;
+    const same = prev.length === visiblePlaces.length && prev.every((p, i) => p.id === visiblePlaces[i].id);
+    if (!same) placesRef.current = visiblePlaces;
+    return placesRef.current;
+  }, [visiblePlaces]);
   const [stopsError, setStopsError] = useState(false);
   // Le détail étape par étape reste replié par défaut pendant le guidage :
   // la carte doit rester l'élément principal à l'écran, pas la liste.
@@ -469,7 +478,7 @@ export default function HomeScreen() {
 
   // « Y aller » depuis un lieu de la carte : l'itinéraire s'ouvre avec ce
   // lieu déjà choisi comme destination, le départ étant la position actuelle.
-  const goToPlace = (place: MapPlace) => {
+  const goToPlace = useCallback((place: MapPlace) => {
     router.push({
       pathname: '/(modals)/itinerary',
       params: {
@@ -481,7 +490,53 @@ export default function HomeScreen() {
         destSubtitle: place.subtitle ?? '',
       },
     });
-  };
+  }, [router]);
+
+  // Marqueurs calculés une fois, pas à chaque position GPS ou déplacement de la
+  // carte : l'écran se redessine souvent pendant le guidage, et recréer ~135
+  // marqueurs à chaque fois rendait la carte saccadée (surtout dans le navigateur).
+  const stopMarkers = useMemo(
+    () =>
+      stops.map((stop) => (
+        // Les arrêts passent toujours au-dessus des lieux.
+        <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} zIndex={10}>
+          <View style={[styles.pin, { backgroundColor: stop.operator_colors?.[0] ?? c.yonn }]}>
+            <Ionicons name="bus" size={13} color="#FFFFFF" />
+          </View>
+          <Callout tooltip={false}>
+            <View style={styles.callout}>
+              <Text style={styles.calloutTitle}>{stop.name}</Text>
+              <Text style={styles.calloutLines}>
+                {stop.lines?.length ? stop.lines.join(' · ') : 'Aucune ligne renseignée'}
+              </Text>
+            </View>
+          </Callout>
+        </Marker>
+      )),
+    [stops, styles, c.yonn]
+  );
+
+  const placeMarkers = useMemo(
+    () =>
+      places.map((place) => {
+        const meta = PLACE_CATEGORIES[place.category];
+        return (
+          <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }} zIndex={1}>
+            <View style={[styles.placePin, { backgroundColor: meta.color }]}>
+              <MaterialCommunityIcons name={meta.icon} size={12} color="#FFFFFF" />
+            </View>
+            <Callout onPress={() => goToPlace(place)}>
+              <View style={styles.callout}>
+                <Text style={styles.calloutTitle}>{place.name}</Text>
+                <Text style={styles.calloutLines}>{meta.label}</Text>
+                <Text style={styles.calloutAction}>Y aller ›</Text>
+              </View>
+            </Callout>
+          </Marker>
+        );
+      }),
+    [places, styles, goToPlace]
+  );
 
   const recenter = () => {
     if (!position) {
@@ -551,44 +606,11 @@ export default function HomeScreen() {
         onRegionChangeComplete={setRegion}
         onMapReady={() => setMapReady(true)}
       >
-        {!activeTrip &&
-          stops.map((stop) => (
-            // Les arrêts passent toujours au-dessus des lieux.
-            <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} zIndex={10}>
-              <View style={[styles.pin, { backgroundColor: stop.operator_colors?.[0] ?? c.yonn }]}>
-                <Ionicons name="bus" size={13} color="#FFFFFF" />
-              </View>
-              <Callout tooltip={false}>
-                <View style={styles.callout}>
-                  <Text style={styles.calloutTitle}>{stop.name}</Text>
-                  <Text style={styles.calloutLines}>
-                    {stop.lines?.length ? stop.lines.join(' · ') : 'Aucune ligne renseignée'}
-                  </Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
+        {!activeTrip && stopMarkers}
 
-        {/* Lieux utiles (OpenStreetMap) : pastille claire et icône colorée,
-            pour ne jamais être confondus avec un arrêt (pastille pleine). */}
-        {!activeTrip &&
-          places.map((place) => {
-            const meta = PLACE_CATEGORIES[place.category];
-            return (
-              <Marker key={place.id} coordinate={place} anchor={{ x: 0.5, y: 0.5 }} zIndex={1}>
-                <View style={[styles.placePin, { backgroundColor: meta.color }]}>
-                  <MaterialCommunityIcons name={meta.icon} size={12} color="#FFFFFF" />
-                </View>
-                <Callout onPress={() => goToPlace(place)}>
-                  <View style={styles.callout}>
-                    <Text style={styles.calloutTitle}>{place.name}</Text>
-                    <Text style={styles.calloutLines}>{meta.label}</Text>
-                    <Text style={styles.calloutAction}>Y aller ›</Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
+        {/* Lieux utiles (OpenStreetMap) : pastille colorée, plus petite et en
+            retrait des arrêts. */}
+        {!activeTrip && placeMarkers}
 
         {activeTrip && (
           <>
