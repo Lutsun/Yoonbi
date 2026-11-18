@@ -51,6 +51,7 @@ services/                Accès aux données (auth, transport, client Supabase),
 scripts/
   build_line_shapes.py    Génère supabase/line_shapes.sql depuis OpenStreetMap (tracés réels des lignes)
   build_ter.py            Génère supabase/ter.sql : gares et voie du TER (OpenStreetMap, ODbL)
+  build_ter_connections.py  Génère supabase/ter_bus_stops.sql : arrêts de bus devant les gares TER
   build_places.py         Génère data/places.json : les lieux affichés sur la carte (OpenStreetMap, ODbL)
 data/places.json         Lieux de Dakar embarqués dans l'app (utilisables hors ligne)
 store/                  État global (session utilisateur)
@@ -69,6 +70,7 @@ supabase/
   fix_plateau_stop_order.sql  Correctif : ordre des arrêts El Malick / Ville sur les lignes DDD 4, 7, 9 et 23
   reports.sql             Signalements des usagers et informations fiables qui en découlent
   ter.sql                 Train Express Régional : opérateur, 14 gares, tracé de la voie, horaires
+  ter_bus_stops.sql       Arrêts de bus devant les gares TER, insérés dans les lignes qui y passent
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
@@ -126,7 +128,7 @@ cp .env.example .env
 Configuration Supabase :
 
 1. Si tu reviens d'une ancienne version du projet (table `users` faite main) : exécute d'abord `supabase/migrate_to_auth.sql` une seule fois. Sur un projet Supabase tout neuf, passe directement à l'étape 2.
-2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, `supabase/fix_plateau_stop_order.sql`, `supabase/reports.sql`, puis `supabase/ter.sql`.
+2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, `supabase/fix_plateau_stop_order.sql`, `supabase/reports.sql`, `supabase/ter.sql`, puis `supabase/ter_bus_stops.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
 Version web (navigateur) — la même app, publiée sur Vercel (https://yoonbi-app.vercel.app) :
