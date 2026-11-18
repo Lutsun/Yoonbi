@@ -5,6 +5,7 @@
 - 🚌 Tata AFTU
 - 🚌 Dakar Dem Dikk
 - 🚌 BRT
+- 🚆 TER (Train Express Régional Dakar – AIBD)
 
 L'objectif : rendre le transport en commun sénégalais **simple à comprendre et à utiliser**, y compris pour les usagers peu à l'aise avec la technologie — pas de jargon, pas d'étapes inutiles, une interface directe.
 
@@ -23,7 +24,7 @@ L'objectif : rendre le transport en commun sénégalais **simple à comprendre e
 - Base de données de lignes et d'arrêts réels de Dakar (BRT, Dakar Dem Dikk, Tata AFTU) — plusieurs dizaines de lignes et d'arrêts
 - **Horaires et fréquence par ligne** — amplitude horaire et fréquence de passage sur la fiche de chaque ligne, avec la mention « estimation » quand l'exploitant ne publie pas d'horaire précis (voir `supabase/schema.sql`)
 - **Lieux de Dakar sur la carte** — restaurants, hôtels, hôpitaux, pharmacies, mairies, marchés, universités, monuments et sites (Monument de la Renaissance, musées…), gares : plus de 1 500 lieux issus d'OpenStreetMap, affichés selon le zoom et cherchables hors ligne. Un appui sur un lieu puis « Y aller » ouvre l'itinéraire (voir `services/mapPlaces.ts`, généré par `scripts/build_places.py`)
-- **Prix réels** — BRT au tarif zonal officiel (400 F dans une zone, 500 F au-delà) ; Dakar Dem Dikk et Tata AFTU estimés selon la distance dans leurs fourchettes publiées, affichés avec « ≈ » ; chaque correspondance ajoute son ticket (voir `services/fares.ts`)
+- **Prix réels** — BRT au tarif zonal officiel (400 F dans une zone, 500 F au-delà) ; TER au tarif zonal SETER (500 F par zone de Dakar à Diamniadio, 3 000 à 4 000 F vers l'AIBD) ; Dakar Dem Dikk et Tata AFTU estimés selon la distance dans leurs fourchettes publiées, affichés avec « ≈ » ; chaque correspondance ajoute son ticket (voir `services/fares.ts`)
 - **Signalements** — depuis le profil (ou la fiche d'une ligne), l'usager signale un problème : arrêt incorrect, problème de ligne, perturbation, grève, retard… avec la ligne et l'arrêt concernés (facultatifs) et sa position. Il suit le statut dans « Mes signalements » ; l'administrateur les examine dans la console (En attente → En cours de vérification → Validé / Rejeté → Résolu). Un signalement validé devient une information fiable, stockée à part (`network_incidents`) pour servir plus tard aux perturbations et au calcul des itinéraires (voir `supabase/reports.sql`)
 - **Cache hors-ligne du réseau et du dernier trajet** — le réseau (lignes et arrêts) reste utilisable sans connexion, et un guidage interrompu par une coupure réseau peut être repris au relancement de l'app (voir `services/offlineCache.ts`)
 
@@ -49,6 +50,7 @@ constants/theme.ts       Couleurs, typographies, espacements — le design syste
 services/                Accès aux données (auth, transport, client Supabase), planificateur d'itinéraire, guidage
 scripts/
   build_line_shapes.py    Génère supabase/line_shapes.sql depuis OpenStreetMap (tracés réels des lignes)
+  build_ter.py            Génère supabase/ter.sql : gares et voie du TER (OpenStreetMap, ODbL)
   build_places.py         Génère data/places.json : les lieux affichés sur la carte (OpenStreetMap, ODbL)
 data/places.json         Lieux de Dakar embarqués dans l'app (utilisables hors ligne)
 store/                  État global (session utilisateur)
@@ -66,6 +68,7 @@ supabase/
   line_hours.sql          Horaires des lignes, utilisés par le planificateur
   fix_plateau_stop_order.sql  Correctif : ordre des arrêts El Malick / Ville sur les lignes DDD 4, 7, 9 et 23
   reports.sql             Signalements des usagers et informations fiables qui en découlent
+  ter.sql                 Train Express Régional : opérateur, 14 gares, tracé de la voie, horaires
 admin/                  Console web d'administration (React + Vite) — voir admin/README.md
 ```
 
@@ -123,7 +126,7 @@ cp .env.example .env
 Configuration Supabase :
 
 1. Si tu reviens d'une ancienne version du projet (table `users` faite main) : exécute d'abord `supabase/migrate_to_auth.sql` une seule fois. Sur un projet Supabase tout neuf, passe directement à l'étape 2.
-2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, `supabase/fix_plateau_stop_order.sql`, puis `supabase/reports.sql`.
+2. Dans l'éditeur SQL, exécute dans l'ordre `supabase/schema.sql`, `supabase/seed.sql`, `supabase/seed_osm.sql`, `supabase/admin.sql`, `supabase/contributions.sql`, `supabase/line_shapes.sql`, `supabase/line_hours.sql`, `supabase/fix_plateau_stop_order.sql`, `supabase/reports.sql`, puis `supabase/ter.sql`.
 3. Dans le dashboard Supabase : **Authentication > Providers > Phone**, active le provider "Phone". Sans fournisseur SMS payant configuré, ajoute des **Test Phone Numbers** (numéro + code fixe, ex. `+221700000001` / `123456`) pour te connecter et tester gratuitement — l'authentification reste 100 % réelle (vrais comptes, vrais tokens), seuls ces numéros peuvent recevoir un code. Pour envoyer de vrais SMS à de vrais numéros sénégalais, configure un fournisseur SMS (Twilio, Vonage...) dans le même écran.
 
 Version web (navigateur) — la même app, publiée sur Vercel (https://yoonbi-app.vercel.app) :
