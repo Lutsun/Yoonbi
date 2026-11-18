@@ -75,8 +75,8 @@ export default function TripSteps({ origin, destination, segments, activeIndex =
             title={
               isRide
                 ? segment.headsign
-                  ? `Prendre ${segment.lineCode} direction ${segment.headsign}`
-                  : `Prendre ${segment.lineCode}`
+                  ? `Prendre ${segment.operatorShortName === 'TER' ? 'le TER' : segment.lineCode} direction ${segment.headsign}`
+                  : `Prendre ${segment.operatorShortName === 'TER' ? 'le TER' : segment.lineCode}`
                 : isFinalWalk
                   ? 'Marcher jusqu’à destination'
                   : `Marcher jusqu’à ${segment.toStopName}`

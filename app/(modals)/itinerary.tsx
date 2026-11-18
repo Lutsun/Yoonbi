@@ -394,7 +394,7 @@ export default function ItineraryScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={stop.isPlace ? placeIcon(stop.category) : 'bus'}
+                    name={stop.isPlace ? placeIcon(stop.category) : stop.lines?.includes('TER') ? 'train' : 'bus'}
                     size={16}
                     color={stop.isPlace ? c.ink : stop.operator_colors?.[0] ?? c.yonn}
                   />
