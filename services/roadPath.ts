@@ -169,7 +169,11 @@ export async function snapPlanToRoads(plan: TripPlan): Promise<TripPlan> {
         const stops = segment.stops && segment.stops.length >= 2 ? segment.stops : segment.path;
         const shape = shapes.get(segment.lineId);
         const exact = shape ? shapeBetweenStops(shape, stops) : null;
-        return { ...segment, path: exact ?? (await routeThrough('ride', stops)).path };
+        if (exact) return { ...segment, path: exact };
+        // Un train ne suit pas les routes : sans son tracé, on relie
+        // simplement les gares entre elles.
+        if (segment.operatorShortName === 'TER') return { ...segment, path: stops };
+        return { ...segment, path: (await routeThrough('ride', stops)).path };
       }
       const routed = await routeThrough('walk', segment.path);
       return {

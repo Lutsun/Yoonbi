@@ -46,6 +46,29 @@ const BRT_ZONES: Record<string, Zone> = {
   Petersen: 'petersen',
 };
 
+// TER : tarif zonal officiel (2e classe). Zone 1 de Dakar à Thiaroye, zone 2 de
+// Yeumbeul à Bargny, zone 3 Diamniadio — 500 F par zone traversée. L'AIBD a
+// sa propre grille : 4 000 F depuis la zone 1, 3 500 F depuis la zone 2,
+// 3 000 F depuis Diamniadio (SETER, tarifs au 12 octobre 2026).
+const TER_ZONES: Record<string, number> = {
+  'Gare TER Dakar': 1,
+  'Gare TER Colobane': 1,
+  'Gare TER Hann': 1,
+  'Gare TER Dalifort': 1,
+  'Gare TER Baux Maraîchers': 1,
+  'Gare TER Pikine': 1,
+  'Gare TER Thiaroye': 1,
+  'Gare TER Yeumbeul': 2,
+  'Gare TER Keur Mbaye Fall': 2,
+  'Gare TER PNR': 2,
+  'Gare TER Rufisque': 2,
+  'Gare TER Bargny': 2,
+  'Gare TER Diamniadio': 3,
+};
+const TER_AIBD = 'Gare TER AIBD';
+const TER_PER_ZONE = 500;
+const TER_TO_AIBD: Record<number, number> = { 1: 4000, 2: 3500, 3: 3000 };
+
 const BRT_ONE_ZONE = 400;
 const BRT_ALL_ZONES = 500;
 
@@ -84,6 +107,17 @@ export function rideFare(params: {
       const to = BRT_ZONES[alightStopName];
       if (!from || !to) return { fareFcfa: BRT_ALL_ZONES, estimated: true };
       return { fareFcfa: from === to ? BRT_ONE_ZONE : BRT_ALL_ZONES, estimated: false };
+    }
+    case 'TER': {
+      const other = boardStopName === TER_AIBD ? alightStopName : alightStopName === TER_AIBD ? boardStopName : null;
+      if (other !== null) {
+        const zone = TER_ZONES[other];
+        return zone ? { fareFcfa: TER_TO_AIBD[zone], estimated: false } : { fareFcfa: TER_TO_AIBD[1], estimated: true };
+      }
+      const from = TER_ZONES[boardStopName];
+      const to = TER_ZONES[alightStopName];
+      if (!from || !to) return { fareFcfa: 1500, estimated: true };
+      return { fareFcfa: (Math.abs(from - to) + 1) * TER_PER_ZONE, estimated: false };
     }
     case 'DDD':
       return { fareFcfa: byDistance(DDD_BANDS, rideKm), estimated: true };

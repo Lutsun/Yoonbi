@@ -147,7 +147,7 @@ function rideInstruction(
       instruction: {
         ...base,
         kind: 'board',
-        title: `Prenez la ${segment.lineCode}`,
+        title: segment.operatorShortName === 'TER' ? 'Prenez le TER' : `Prenez la ${segment.lineCode}`,
         detail: segment.headsign
           ? `Direction ${segment.headsign} · descendez à ${segment.alightStopName}`
           : `Descendez à ${segment.alightStopName}`,

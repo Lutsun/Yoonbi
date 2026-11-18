@@ -500,8 +500,14 @@ export default function HomeScreen() {
       stops.map((stop) => (
         // Les arrêts passent toujours au-dessus des lieux.
         <Marker key={stop.id} coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} zIndex={10}>
-          <View style={[styles.pin, { backgroundColor: stop.operator_colors?.[0] ?? c.yonn }]}>
-            <Ionicons name="bus" size={13} color="#FFFFFF" />
+          <View
+            style={[
+              styles.pin,
+              stop.lines?.includes('TER') && styles.stationPin,
+              { backgroundColor: stop.operator_colors?.[0] ?? c.yonn },
+            ]}
+          >
+            <Ionicons name={stop.lines?.includes('TER') ? 'train' : 'bus'} size={13} color="#FFFFFF" />
           </View>
           <Callout tooltip={false}>
             <View style={styles.callout}>
@@ -1167,6 +1173,9 @@ const createStyles = (c: Palette, isDark: boolean) => {
     // Lieux : petits, discrets, en retrait des arrêts (l'essentiel de Yoonbi).
     // Lieux : petite pastille pleine, couleur de la catégorie, un peu
     // transparente — lisible, mais en retrait des arrêts.
+    // Gare du TER : même pastille qu'un arrêt, mais carrée, pour la repérer
+    // d'un coup d'œil parmi les arrêts de bus.
+    stationPin: { borderRadius: 7 },
     placePin: {
       width: 20,
       height: 20,

@@ -31,6 +31,14 @@ import {
 // 24 km/h en voie réservée et 12 km/h dans la circulation.
 const BRT_SPEED_KMH = 24;
 const BUS_SPEED_KMH = 12;
+// TER : Dakar–Diamniadio, 36 km en 46 min arrêts compris (terdakar.sn), soit
+// environ 47 km/h. Sur voie ferrée, la distance entre gares est celle du rail :
+// pas de détour de rue à ajouter.
+const TER_SPEED_KMH = 47;
+// Diamniadio–AIBD : 19 km sans arrêt, à pleine vitesse (jusqu'à 160 km/h) —
+// Dakar–AIBD fait ~55 min en tout. Les longs tronçons roulent donc plus vite.
+const TER_LONG_HOP_KM = 8;
+const TER_LONG_HOP_SPEED_KMH = 100;
 const WALK_SPEED_KMH = 4.5;
 // À pied, on ne marche jamais en ligne droite : les rues, les carrefours et
 // les blocs ajoutent en moyenne 30 % à la distance à vol d'oiseau. Sans ce
@@ -46,6 +54,8 @@ export function walkMinutesForKm(straightKm: number): number {
 // publié, on retient une hypothèse de 6 min.
 const BRT_WAIT_MINUTES = 3;
 const BOARD_WAIT_MINUTES = 6;
+// Un train toutes les 8 à 10 min (24 min vers l'AIBD) : attente moyenne ~5 min.
+const TER_WAIT_MINUTES = 5;
 // Une correspondance coûte plus que le temps qu'elle prend (risque de rater
 // le bus, descendre, chercher l'arrêt) : comme les applis de transport, on
 // préfère un trajet direct à un trajet à peine plus court avec changement.
@@ -94,12 +104,14 @@ export type RouteGraph = {
 };
 
 function rideMinutes(km: number, operatorShortName: string): number {
+  if (operatorShortName === 'TER') return (km / (km > TER_LONG_HOP_KM ? TER_LONG_HOP_SPEED_KMH : TER_SPEED_KMH)) * 60;
   const roadKm = km < SHORT_HOP_KM ? km : km * LONG_HOP_DETOUR;
   const speed = operatorShortName === 'BRT' ? BRT_SPEED_KMH : BUS_SPEED_KMH;
   return (roadKm / speed) * 60;
 }
 
 function waitMinutes(operatorShortName: string): number {
+  if (operatorShortName === 'TER') return TER_WAIT_MINUTES;
   return operatorShortName === 'BRT' ? BRT_WAIT_MINUTES : BOARD_WAIT_MINUTES;
 }
 
