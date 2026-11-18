@@ -71,6 +71,9 @@ const WALK_COST_FACTOR = 1.5;
 const SHORT_HOP_KM = 0.6;
 const LONG_HOP_DETOUR = 1.3;
 const WALK_TRANSFER_RADIUS_KM = 0.35;
+// Pour rejoindre une gare TER, on accepte de marcher un peu plus : le train fait
+// gagner bien plus que ces quelques minutes (environ 9 min à pied au plus).
+const TER_TRANSFER_RADIUS_KM = 0.6;
 // En dessous, on considère que l'utilisateur est déjà à l'arrêt : inutile de
 // lui afficher une étape "marcher 20 m".
 const MIN_ACCESS_WALK_KM = 0.06;
@@ -183,13 +186,15 @@ export function buildRouteGraph(rows: RouteGraphRow[]): RouteGraph {
     }
   }
 
+  const terStations = new Set(rows.filter((r) => r.operator_short_name === 'TER').map((r) => r.stop_id));
   const stopList = Array.from(stops.values());
   for (let i = 0; i < stopList.length; i++) {
     for (let j = i + 1; j < stopList.length; j++) {
       const a = stopList[i];
       const b = stopList[j];
       const km = distanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
-      if (km <= WALK_TRANSFER_RADIUS_KM) {
+      const radius = terStations.has(a.id) !== terStations.has(b.id) ? TER_TRANSFER_RADIUS_KM : WALK_TRANSFER_RADIUS_KM;
+      if (km <= radius) {
         const minutes = walkMinutesForKm(km);
         addEdge(walkEdges, a.id, { kind: 'walk', toStopId: b.id, minutes });
         addEdge(walkEdges, b.id, { kind: 'walk', toStopId: a.id, minutes });
