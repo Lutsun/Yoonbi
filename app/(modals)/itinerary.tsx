@@ -162,7 +162,15 @@ export default function ItineraryScreen() {
       ]).then(([stopsFound, placesFound]) => {
         const known = new Set(local.map((p) => searchKey(p.name)));
         const others = placesFound.filter((p) => !known.has(searchKey(p.name)));
-        setResults([...stopsFound.slice(0, 4), ...local, ...others].slice(0, 12));
+        // Les arrêts dont le nom commence par la saisie d'abord : « Gare TER »
+        // montre les gares avant les « Arrêt Gare TER … » voisins.
+        const q = searchKey(text);
+        const ranked = [...stopsFound].sort(
+          (a, b) => Number(searchKey(b.name).startsWith(q)) - Number(searchKey(a.name).startsWith(q))
+        );
+        // Beaucoup d'arrêts trouvés (« Gare TER ») : on en montre plus.
+        const stopCount = ranked.length > 4 ? 6 : 4;
+        setResults([...ranked.slice(0, stopCount), ...local, ...others].slice(0, 12));
       });
     }, 450);
     return () => clearTimeout(debounceRef.current);
