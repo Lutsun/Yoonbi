@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs/types';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
@@ -25,9 +25,12 @@ const ICONS: Record<
   profile: { on: 'person-circle', off: 'person-circle-outline' },
 };
 
+// Props reçues par `tabBar` de <Tabs>, sans importer les fichiers internes d'expo-router.
+type BottomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
+
 // Barre "île" flottante, positionnée à la main : plus fiable que
 // `tabBarStyle`, qui ignore left/right selon la version de React Navigation.
-export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function CustomTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors: c, isDark } = useTheme();
   const styles = useMemo(() => createStyles(c, isDark), [c, isDark]);
@@ -41,12 +44,12 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         const icon = ICONS[route.name] ?? ICONS.index;
 
         const onPress = () => {
-          const event = navigation.emit({
+          const event = emitter.emit({
             type: 'tabPress',
             target: route.key,
             canPreventDefault: true,
           });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+          if (!focused && !event.defaultPrevented) navigateToTab(route.key);
         };
 
         return (

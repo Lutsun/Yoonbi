@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { View, TextInput, Text, StyleSheet, Pressable } from 'react-native';
+import { View, TextInput, Text, StyleSheet, Pressable, type TextInputInstance } from 'react-native';
 import { Fonts, Radii, Palette } from '../../constants/theme';
 import { useColors } from '../../store/ThemeContext';
 
@@ -16,7 +16,7 @@ export default function OtpInput({
 }) {
   const c = useColors();
   const styles = useMemo(() => createStyles(c), [c]);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const digits = Array.from({ length }, (_, i) => value[i] ?? '');
   const activeIndex = Math.min(value.length, length - 1);
 
