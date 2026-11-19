@@ -53,7 +53,10 @@
           "motionUsagePermission": false,
           "isIosBackgroundLocationEnabled": false
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-status-bar"
     ],
     "scheme": "yoonbi"
   }
