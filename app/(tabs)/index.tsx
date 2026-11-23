@@ -97,11 +97,13 @@ type RouteLayer = {
   ahead: LatLng[] | null;
 };
 
-const DAKAR_REGION: Region = {
-  latitude: 14.6928,
-  longitude: -17.4467,
-  latitudeDelta: 0.045,
-  longitudeDelta: 0.045,
+// Vue de départ, tant que la position de l'utilisateur n'est pas connue :
+// Hann Maristes. Dès la première position reçue, la carte se centre sur lui.
+const DEFAULT_REGION: Region = {
+  latitude: 14.7374,
+  longitude: -17.4265,
+  latitudeDelta: 0.03,
+  longitudeDelta: 0.03,
 };
 
 // Ce que la carte affiche quand elle ne peut pas localiser l'utilisateur.
@@ -159,7 +161,7 @@ export default function HomeScreen() {
   const [stops, setStops] = useState<Stop[]>([]);
   // Portion de carte visible : décide quels lieux (restaurants, mairies…)
   // afficher, selon le zoom.
-  const [region, setRegion] = useState<Region>(DAKAR_REGION);
+  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const visiblePlaces = useMemo(() => placesInRegion(region, stops), [region, stops]);
   // Même liste de lieux après un petit déplacement : on garde le même tableau
   // pour ne pas redessiner leurs marqueurs.
@@ -599,7 +601,7 @@ export default function HomeScreen() {
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
-        initialRegion={DAKAR_REGION}
+        initialRegion={DEFAULT_REGION}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}

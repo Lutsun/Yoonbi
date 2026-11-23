@@ -21,6 +21,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { StyleProp, View, ViewStyle } from 'react-native';
+import { useUserLocation } from '../../store/LocationContext';
 import { MapContainer, Pane, Polyline as LeafletPolyline, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 
 export type LatLng = { latitude: number; longitude: number };
@@ -130,36 +131,71 @@ const Bridge = forwardRef<
   return null;
 });
 
-// Le point bleu de l'utilisateur, comme sur téléphone.
+// Le point bleu de l'utilisateur, comme sur téléphone. La position vient du
+// même fournisseur que le reste de l'app (store/LocationContext) : une seule
+// demande d'autorisation au navigateur, et le point est exactement là où le
+// planificateur et le guidage croient que vous êtes.
+const USER_DOT_HTML =
+  '<div style="width:18px;height:18px;border-radius:50%;background:#1A73E8;border:3px solid #FFFFFF;' +
+  'box-shadow:0 0 0 6px rgba(26,115,232,0.22),0 1px 4px rgba(0,0,0,0.35);box-sizing:border-box"></div>';
+
 function UserLocation() {
   const map = useMap();
+  const { position } = useUserLocation();
+  const dotRef = useRef<L.Marker | null>(null);
+  const haloRef = useRef<L.Circle | null>(null);
+
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    let dot: L.CircleMarker | null = null;
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
-        const at = L.latLng(pos.coords.latitude, pos.coords.longitude);
-        if (!dot) {
-          dot = L.circleMarker(at, {
-            radius: 8,
-            color: '#FFFFFF',
-            weight: 3,
-            fillColor: '#1A73E8',
-            fillOpacity: 1,
-            pane: 'user',
-          }).addTo(map);
-        } else {
-          dot.setLatLng(at);
-        }
-      },
-      () => {},
-      { enableHighAccuracy: true }
-    );
-    return () => {
-      navigator.geolocation.clearWatch(id);
-      dot?.remove();
-    };
-  }, [map]);
+    if (!position) {
+      dotRef.current?.remove();
+      haloRef.current?.remove();
+      dotRef.current = null;
+      haloRef.current = null;
+      return;
+    }
+    const at = L.latLng(position.latitude, position.longitude);
+    // Zone d'incertitude, comme Google Maps : seulement si elle est grande
+    // (position approximative), sinon elle encombre la carte.
+    const radius = position.accuracy ?? 0;
+    if (!dotRef.current) {
+      dotRef.current = L.marker(at, {
+        icon: L.divIcon({ html: USER_DOT_HTML, className: '', iconSize: [18, 18], iconAnchor: [9, 9] }),
+        // Toujours au-dessus des arrêts et des lieux.
+        zIndexOffset: 100000,
+        interactive: false,
+        keyboard: false,
+      }).addTo(map);
+    } else {
+      dotRef.current.setLatLng(at);
+    }
+    if (radius > 30) {
+      if (!haloRef.current) {
+        haloRef.current = L.circle(at, {
+          radius,
+          pane: 'user',
+          color: '#1A73E8',
+          weight: 1,
+          opacity: 0.4,
+          fillColor: '#1A73E8',
+          fillOpacity: 0.1,
+          interactive: false,
+        }).addTo(map);
+      } else {
+        haloRef.current.setLatLng(at).setRadius(radius);
+      }
+    } else {
+      haloRef.current?.remove();
+      haloRef.current = null;
+    }
+  }, [map, position]);
+
+  useEffect(
+    () => () => {
+      dotRef.current?.remove();
+      haloRef.current?.remove();
+    },
+    []
+  );
   return null;
 }
 
@@ -183,7 +219,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   ref
 ) {
   const [map, setMap] = useState<L.Map | null>(null);
-  const region = initialRegion ?? { latitude: 14.6928, longitude: -17.4467, latitudeDelta: 0.045, longitudeDelta: 0.045 };
+  const region = initialRegion ?? { latitude: 14.7374, longitude: -17.4265, latitudeDelta: 0.03, longitudeDelta: 0.03 };
   const dark = userInterfaceStyle === 'dark';
 
   return (
